@@ -5,25 +5,6 @@ require 'rack/test'
 require 'sequel'
 Sequel.extension :migration
 
-RSpec.shared_examples "a dataset" do |field, values, path|
-  it "returns records with #{field} = #{values.join(", ")}" do
-    get path
-    result = JSON.parse(last_response.body)
-    values.each do |value|
-      filtered = result.select { |rec| rec[field] == value }
-      expect(filtered.length).to be > 0
-    end
-  end
-end
-
-RSpec.shared_examples "a single record" do |field, value, path|
-  it "returns the record with #{field} = #{value}" do
-    get path
-    result = JSON.parse(last_response.body)
-    expect(result[field]).to eq value
-  end
-end
-
 RSpec.describe "Mad Scientists web-service" do
   include Rack::Test::Methods
 
@@ -59,19 +40,62 @@ RSpec.describe "Mad Scientists web-service" do
 
   describe "#get '/scientists'" do
     context "when there are no filters" do
-      it_behaves_like "a dataset", "name",
-        ["Richard Feynman", "Emmett Brown", "Frankenstein"], '/scientists'
+      it "returns all records" do
+        get '/scientists'
+
+        expect(last_response).to be_ok
+        expect(last_response.body).to eq Scientist.all.to_json
+      end
     end
   end
 
   describe "#get '/scientists/:id'" do
-#    it_behaves_like "a single record", "scientist_id", 1, '/scientists/1'
+    context "when the database has the record with the given id" do
+      it "returns the record with the given id" do
+        id = Scientist.first[:scientist_id]
+        get 'scientists/' + id.to_s
+
+        expect(last_response).to be_ok
+        expect(last_response.body).to eq Scientist.first.to_json
+      end
+    end
+
+    context "when the database doesn't have the record with the given id" do
+      it "returns code 404" do
+        get 'scientists/32000'
+
+        expect(last_response.status).to eq 404
+      end
+    end
+
+    context "when :id is not an integer bigger than 0" do
+      context "when :id is an integer less than 1" do
+        it "returns code 400" do
+          get 'scientists/0'
+          expect(last_response.status).to eq 400
+
+          get 'scientists/-2'
+          expect(last_response.status).to eq 400
+        end
+      end
+
+      context "when :id is not an integer" do
+        it "returns code 400" do
+          get 'scientists/sdkfjl'
+          expect(last_response.status).to eq 400
+        end
+      end
+    end
   end
 
   describe "#get '/devices'" do
     context "when there are no filters" do
-      it_behaves_like "a dataset", "name",
-        ["DeLorean time machine", "Atomic bomb"], '/devices'
+      it "returns all records" do
+        get '/devices'
+
+        expect(last_response).to be_ok
+        expect(last_response.body).to eq Device.all.to_json
+      end
     end
   end
 
@@ -97,15 +121,13 @@ RSpec.describe "Mad Scientists web-service" do
         expect(last_response.status).to eq 204
         
         get '/scientists'
-        result = JSON.parse last_response.body
+        result = JSON.parse(last_response.body)[-2..-1]
 
-        expect(result[-2]["name"]).to eq "One"
-        expect(result[-2]["madness_level"]).to eq 10
-        expect(result[-2]["galaxy_destruction_attempts"]).to eq 12
-
-        expect(result[-1]["name"]).to eq "Two"
-        expect(result[-1]["madness_level"]).to eq 80
-        expect(result[-1]["galaxy_destruction_attempts"]).to eq 1024
+        (-2..-1).each do |index|
+          data[index].keys.each do |key|
+            expect(result[index][key]).to eq data[index][key]
+          end
+        end
       end
     end
 
@@ -199,6 +221,3 @@ RSpec.describe "Mad Scientists web-service" do
     end
   end
 end
-
-
-
