@@ -61,40 +61,31 @@ RSpec.describe "Mad Scientists web-service" do
     end
 
     context "when the database doesn't have the record with the given id" do
-      it "returns code 404" do
-        get 'scientists/32000'
+      context "when :id is valid but there is no matching record" do
+        it "returns code 404" do
+          get 'scientists/64000'
 
-        expect(last_response.status).to eq 404
-      end
-    end
-
-    context "when :id is not an integer bigger than 0" do
-      context "when :id is an integer less than 1" do
-        it "returns code 400" do
-          get 'scientists/0'
-          expect(last_response.status).to eq 400
-
-          get 'scientists/-2'
-          expect(last_response.status).to eq 400
+          expect(last_response.status).to eq 404
         end
       end
 
-      context "when :id is not an integer" do
-        it "returns code 400" do
-          get 'scientists/sdkfjl'
-          expect(last_response.status).to eq 400
+      context "when :id is not a proper id" do
+        context "when :id is an integer less than 1" do
+          it "returns code 400" do
+            get 'scientists/0'
+            expect(last_response.status).to eq 400
+
+            get 'scientists/-2'
+            expect(last_response.status).to eq 400
+          end
         end
-      end
-    end
-  end
 
-  describe "#get '/devices'" do
-    context "when there are no filters" do
-      it "returns all records" do
-        get '/devices'
-
-        expect(last_response).to be_ok
-        expect(last_response.body).to eq Device.all.to_json
+        context "when :id is not an integer" do
+          it "returns code 400" do
+            get 'scientists/sdkfjl'
+            expect(last_response.status).to eq 400
+          end
+        end
       end
     end
   end
@@ -131,32 +122,30 @@ RSpec.describe "Mad Scientists web-service" do
       end
     end
 
-    context "when invalid JSON is sent" do
-      context "when failed to parse JSON" do
-        it "returns 400 code with 'failed to parse JSON' message" do
-          post '/scientists', "[{dkjghk: 10, dfgf}]"
+    context "when failed to parse JSON" do
+      it "returns 400 code with 'failed to parse JSON' message" do
+        post '/scientists', "[{dkjghk: 10, dfgf}]"
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq "failed to parse JSON"
+      end
+    end
+
+    context "when sent JSON is not an array of hashes" do
+      context "when sent data is not an array" do
+        it "returns code 400 with 'invalid request body format' message" do
+          post '/scientists', {"koo" => 123}.to_json
+
           expect(last_response.status).to eq 400
-          expect(last_response.body).to eq "failed to parse JSON"
+          expect(last_response.body).to eq 'invalid request body format'
         end
       end
 
-      context "when sent JSON is not an array of hashes" do
-        context "when sent data is not an array" do
-          it "returns code 400 with 'invalid request body format' message" do
-            post '/scientists', {"koo" => 123}.to_json
+      context "when the array contains a non-hash element" do
+        it "returns code 400 with 'invalid request body format' message" do
+          post '/scientists', [{}, {}, [], {}].to_json
 
-            expect(last_response.status).to eq 400
-            expect(last_response.body).to eq 'invalid request body format'
-          end
-        end
-
-        context "when the array contains a non-hash element" do
-          it "returns code 400 with 'invalid request body format' message" do
-            post '/scientists', [{}, {}, [], {}].to_json
-
-            expect(last_response.status).to eq 400
-            expect(last_response.body).to eq 'invalid request body format'
-          end
+          expect(last_response.status).to eq 400
+          expect(last_response.body).to eq 'invalid request body format'
         end
       end
 
@@ -202,7 +191,7 @@ RSpec.describe "Mad Scientists web-service" do
         end
       end
 
-      context "when a record has invalid data types" do
+      context "when a record has mismatched data types" do
         it "returns code 400 with 'invalid request body format' message" do
           data = [
             {
@@ -217,6 +206,130 @@ RSpec.describe "Mad Scientists web-service" do
           expect(last_response.status).to eq 400
           expect(last_response.body).to eq 'invalid request body format'
         end
+      end
+    end
+  end
+
+  describe "#patch '/scientists/:id'" do
+    context "when the request body is a hash containing a subset of model" +
+        "fields except scientist_id with proper data types" do
+      it "updates the record" do
+        id = Scientist.first[:scientist_id]
+        name = Scientist.first[:name]
+
+        data = {"madness_level" => 200, "galaxy_destruction_attempts" => 500}
+        patch 'scientists/' + id.to_s, data.to_json
+
+        expect(last_response).to be_ok
+
+        expect(Scientist.first[:name]).to eq name
+        expect(Scientist.first[:madness_level]).to eq 200
+        expect(Scientist.first[:galaxy_destruction_attempts]).to eq 500
+      end
+    end
+
+    context "when failed to parse JSON" do
+      it "returns 400 code with 'failed to parse JSON' message" do
+        id = Scientist.first[:scientist_id]
+
+        patch 'scientists/' + id.to_s, "[{dkjghk: 10, dfgf}]"
+
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq "failed to parse JSON"
+      end
+    end
+
+    context "when sent JSON is not a hash" do
+      it "returns code 400 with 'invalid request body format' message" do
+        id = Scientist.first[:scientist_id]
+
+        patch 'scientists/' + id.to_s, "[]"
+
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq "invalid request body format"
+      end
+    end
+
+    context "when the hash contains a non-string key" do
+      it "returns code 400 with 'invalid request body format' message" do
+        id = Scientist.first[:scientist_id]
+
+        patch 'scientists/' + id.to_s, {"madness_level" => 10, 1 => 2}.to_json
+
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq 'invalid request body format'
+      end
+    end
+
+    context "when the hash has a redundant field" do
+      it "returns code 400 with 'invalid request body format' message" do
+        id = Scientist.first[:scientist_id]
+
+        patch 'scientists/' + id.to_s, {"madness_level" => 10,
+                                        "scientist_id" => 2}.to_json
+
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq 'invalid request body format'
+      end
+    end
+
+    context "when the hash values have mismatched data types" do
+      it "returns code 400 with 'invalid request body format' message" do
+        id = Scientist.first[:scientist_id]
+
+        data =
+          {
+            "name" => "One",
+            "madness_level" => 10,
+            "galaxy_destruction_attempts" => "eight"
+          }
+
+        patch '/scientists/' + id.to_s, data.to_json
+
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq 'invalid request body format'
+      end
+    end
+
+    context "when the database doesn't have the record with the given id" do
+      let(:data) { {"madness_level": 10} }
+
+      context "when :id is valid but there is no matching record" do
+        it "returns code 404" do
+          patch 'scientists/64000', data
+
+          expect(last_response.status).to eq 404
+        end
+      end
+
+      context "when :id is not a proper id" do
+        context "when :id is an integer less than 1" do
+          it "returns code 400" do
+            patch 'scientists/0', data
+            expect(last_response.status).to eq 400
+
+            patch 'scientists/-2', data
+            expect(last_response.status).to eq 400
+          end
+        end
+
+        context "when :id is not an integer" do
+          it "returns code 400" do
+            patch 'scientists/sdkfjl', data
+            expect(last_response.status).to eq 400
+          end
+        end
+      end
+    end
+  end
+
+  describe "#get '/devices'" do
+    context "when there are no filters" do
+      it "returns all records" do
+        get '/devices'
+
+        expect(last_response).to be_ok
+        expect(last_response.body).to eq Device.all.to_json
       end
     end
   end
