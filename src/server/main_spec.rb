@@ -5,6 +5,52 @@ require 'rack/test'
 require 'sequel'
 Sequel.extension :migration
 
+RSpec.shared_examples "access by id" do
+                                  |model, method, path, example_data=nil|
+  context "when the database doesn't have the record with the given id" do
+    context "when :id is valid but there is no matching record" do
+      it "returns code 404" do
+        uri = path + "32000"
+        if example_data
+          send method, uri, example_data
+        else
+          send method, uri
+        end
+
+        expect(last_response.status).to eq 404
+      end
+    end
+
+    context "when :id is not a proper id" do
+      context "when :id is an integer less than 1" do
+        it "returns code 400" do
+          uri = path + "0"
+          if example_data
+            send method, uri, example_data
+          else
+            send method, uri
+          end
+
+          expect(last_response.status).to eq 400
+        end
+      end
+
+      context "when :id is not an integer" do
+        it "returns code 400" do
+          uri = path + "188.1"
+          if example_data
+            send method, uri, example_data
+          else
+            send method, uri
+          end
+
+          expect(last_response.status).to eq 400
+        end
+      end
+    end
+  end
+end
+
 RSpec.describe "Mad Scientists web-service" do
   include Rack::Test::Methods
 
@@ -60,34 +106,7 @@ RSpec.describe "Mad Scientists web-service" do
       end
     end
 
-    context "when the database doesn't have the record with the given id" do
-      context "when :id is valid but there is no matching record" do
-        it "returns code 404" do
-          get 'scientists/64000'
-
-          expect(last_response.status).to eq 404
-        end
-      end
-
-      context "when :id is not a proper id" do
-        context "when :id is an integer less than 1" do
-          it "returns code 400" do
-            get 'scientists/0'
-            expect(last_response.status).to eq 400
-
-            get 'scientists/-2'
-            expect(last_response.status).to eq 400
-          end
-        end
-
-        context "when :id is not an integer" do
-          it "returns code 400" do
-            get 'scientists/sdkfjl'
-            expect(last_response.status).to eq 400
-          end
-        end
-      end
-    end
+    it_behaves_like "access by id", Scientist, :get, 'scientists/'
   end
 
   describe "#post '/scientists'" do
@@ -211,6 +230,9 @@ RSpec.describe "Mad Scientists web-service" do
   end
 
   describe "#patch '/scientists/:id'" do
+    it_behaves_like "access by id", Scientist, :patch, 'scientists/',
+      {"madness_level" => 200, "galaxy_destruction_attempts" => 500}
+
     context "when the request body is a hash containing a subset of model" +
         "fields except scientist_id with proper data types" do
       it "updates the record" do
@@ -288,37 +310,6 @@ RSpec.describe "Mad Scientists web-service" do
 
         expect(last_response.status).to eq 400
         expect(last_response.body).to eq 'invalid request body format'
-      end
-    end
-
-    context "when the database doesn't have the record with the given id" do
-      let(:data) { {"madness_level": 10} }
-
-      context "when :id is valid but there is no matching record" do
-        it "returns code 404" do
-          patch 'scientists/64000', data
-
-          expect(last_response.status).to eq 404
-        end
-      end
-
-      context "when :id is not a proper id" do
-        context "when :id is an integer less than 1" do
-          it "returns code 400" do
-            patch 'scientists/0', data
-            expect(last_response.status).to eq 400
-
-            patch 'scientists/-2', data
-            expect(last_response.status).to eq 400
-          end
-        end
-
-        context "when :id is not an integer" do
-          it "returns code 400" do
-            patch 'scientists/sdkfjl', data
-            expect(last_response.status).to eq 400
-          end
-        end
       end
     end
   end

@@ -6,7 +6,7 @@ Sequel::Model.plugin :json_serializer
 
 # The $db variable needs to be initialized before requiring this module
 
-def check_record_integrity(fields, rec)
+def check_record_integrity(fields, rec, subset: false)
   if rec.class != Hash
     return false
   end
@@ -93,11 +93,11 @@ post '/scientists' do
 end
 
 patch '/scientists/:id' do |id|
-  begin
-    num = Integer(id)
-  rescue ArgumentError
+  if !id.match(/^(\d)+$/)
     halt 400
   end
+
+  num = Integer(id)
 
   if num < 1
     halt 400
