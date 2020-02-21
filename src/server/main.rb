@@ -7,14 +7,12 @@ Sequel::Model.plugin :json_serializer
 # The $db variable needs to be initialized before requiring this module
 
 def check_record_integrity(fields, rec, subset: false)
-  if rec.class != Hash
-    return false
+  if !subset
+    if rec.size != fields.size
+      return false
+    end
   end
 
-  # Check that there are no missing or redundant keys in the record
-  if rec.size != fields.size
-    return false
-  end
   rec.keys.each do |key|
     if not fields.keys.include? key.to_sym
       return false
@@ -28,6 +26,20 @@ def check_record_integrity(fields, rec, subset: false)
   end
 
   true
+end
+
+def parse_id(string)
+  if !string.match(/^(\d)+$/)
+    return nil
+  end
+
+  num = Integer(string)
+
+  if num < 1
+    return nil
+  end
+
+  num
 end
 
 class Scientist < Sequel::Model($db[:scientists])
@@ -47,13 +59,8 @@ get '/scientists' do
 end
 
 get '/scientists/:id' do |id|
-  begin
-    num = Integer(id)
-  rescue ArgumentError
-    halt 400
-  end
-
-  if num < 1
+  num = parse_id(id)
+  if !num
     halt 400
   end
 
@@ -80,6 +87,10 @@ post '/scientists' do
             galaxy_destruction_attempts: Integer}
 
   records.each do |rec|
+    if rec.class != Hash
+      halt 400, "invalid request body format"
+    end
+
     if !check_record_integrity(fields, rec)
       halt 400, "invalid request body format"
     end
@@ -93,13 +104,8 @@ post '/scientists' do
 end
 
 patch '/scientists/:id' do |id|
-  if !id.match(/^(\d)+$/)
-    halt 400
-  end
-
-  num = Integer(id)
-
-  if num < 1
+  num = parse_id(id)
+  if !num
     halt 400
   end
 
@@ -121,17 +127,31 @@ patch '/scientists/:id' do |id|
   fields = {name: String, madness_level: Integer,
             galaxy_destruction_attempts: Integer}
 
-  update.keys.each do |key|
-    if not fields.keys.include? key.to_sym or
-        update[key].class != fields[key.to_sym]
+  if !check_record_integrity(fields, update, subset: true)
       halt 400, "invalid request body format"
-    end
   end
 
   update.keys.each do |key|
     record[key.to_sym] = update[key]
   end
   record.save
+end
+
+delete '/scientists/:id' do |id|
+  num = parse_id(id)
+  if !num
+    halt 400
+  end
+
+  if !Scientist[scientist_id: num]
+    halt 404
+  end
+
+  begin
+    Scientist[scientist_id: num].delete
+  rescue Sequel::ForeignKeyConstraintViolation
+    halt 400, 'foreign key constraint failed'
+  end
 end
 
 get '/devices' do

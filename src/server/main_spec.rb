@@ -6,13 +6,13 @@ require 'sequel'
 Sequel.extension :migration
 
 RSpec.shared_examples "access by id" do
-                                  |model, method, path, example_data=nil|
+                                  |model, method, path, data=nil|
   context "when the database doesn't have the record with the given id" do
     context "when :id is valid but there is no matching record" do
       it "returns code 404" do
         uri = path + "32000"
-        if example_data
-          send method, uri, example_data
+        if data
+          send method, uri, data
         else
           send method, uri
         end
@@ -25,8 +25,8 @@ RSpec.shared_examples "access by id" do
       context "when :id is an integer less than 1" do
         it "returns code 400" do
           uri = path + "0"
-          if example_data
-            send method, uri, example_data
+          if data
+            send method, uri, data
           else
             send method, uri
           end
@@ -38,8 +38,8 @@ RSpec.shared_examples "access by id" do
       context "when :id is not an integer" do
         it "returns code 400" do
           uri = path + "188.1"
-          if example_data
-            send method, uri, example_data
+          if data
+            send method, uri, data
           else
             send method, uri
           end
@@ -47,6 +47,209 @@ RSpec.shared_examples "access by id" do
           expect(last_response.status).to eq 400
         end
       end
+    end
+  end
+end
+
+RSpec.shared_examples 'get all request' do |model, path|
+  it "returns all records" do
+    get path
+
+    expect(last_response).to be_ok
+    expect(last_response.body).to eq model.all.to_json
+  end
+end
+
+RSpec.shared_examples 'get by id request' do |model, path, id_field|
+  it_behaves_like "access by id", model, :get, path
+
+  context "when the database has the record with the given id" do
+    it "returns the record with the given id" do
+      id = model.first[id_field]
+
+      get path + id.to_s
+
+      expect(last_response).to be_ok
+      expect(last_response.body).to eq model.first.to_json
+    end
+  end
+end
+
+RSpec.shared_examples 'post request' do |model, path, data|
+  context "when every record in the array has all the necessary fields" +
+    " and no redundant ones" do
+    it "adds new records" do
+      post path, data.to_json
+
+      expect(last_response.status).to eq 204
+      
+      get path
+      result = JSON.parse(last_response.body)[-data.length..-1]
+
+      (-data.length..-1).each do |index|
+        data[index].keys.each do |key|
+          expect(result[index][key]).to eq data[index][key]
+        end
+      end
+    end
+  end
+
+  context "when failed to parse JSON" do
+    it "returns 400 code with 'failed to parse JSON' message" do
+      post path, "[{dkjghk: 10, dfgf}]"
+
+      expect(last_response.status).to eq 400
+      expect(last_response.body).to eq "failed to parse JSON"
+    end
+  end
+
+  context "when sent JSON is not an array of hashes" do
+    context "when sent data is not an array" do
+      it "returns code 400 with 'invalid request body format' message" do
+        post path, {"koo" => 123}.to_json
+
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq 'invalid request body format'
+      end
+    end
+
+    context "when the array contains a non-hash element" do
+      it "returns code 400 with 'invalid request body format' message" do
+        post path, [{}, {}, [], {}].to_json
+
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq 'invalid request body format'
+      end
+    end
+
+    context "when one of the hashes contains a non-string key" do
+      it "returns code 400 with 'invalid request body format' message" do
+        corrupt = data.dup
+        corrupt[0][2] = 3
+
+        post path, corrupt.to_json
+
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq 'invalid request body format'
+      end
+    end
+
+    context "when there is a missing field in one of the records" do
+      it "returns code 400 with 'invalid request body format' message" do
+        corrupt = data.dup
+        corrupt[0].delete([data[0].keys[0]])
+        post path, corrupt.to_json
+
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq 'invalid request body format'
+      end
+    end
+
+    context "when there is a redundant field in one of the records" do
+      it "returns code 400 with 'invalid request body format' message" do
+        corrupt = data.dup
+        corrupt[0]["koo"] = 3
+
+        post path, corrupt.to_json
+
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq 'invalid request body format'
+      end
+    end
+
+    context "when a record has mismatched data types" do
+      it "returns code 400 with 'invalid request body format' message" do
+        corrupt = data.dup
+        corrupt[0][data[0].keys[0]] = Hash.new
+
+        post path, data.to_json
+
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq 'invalid request body format'
+      end
+    end
+  end
+end
+
+RSpec.shared_examples "patch request" do |model, id_field, path, data|
+  it_behaves_like "access by id", model, :patch, path, data
+
+  context "when the request body is a hash containing a subset of model" +
+      "fields except #{id_field} with proper data types" do
+    it "updates the record" do
+      id = model.first[id_field]
+      values = model.first.values.dup
+      data.each { |k, v| values[k.to_sym] = v }
+
+      patch path + id.to_s, data.to_json
+
+      expect(last_response).to be_ok
+
+      model.first.values.each do |k, v|
+        expect(model.first.values[k]).to eq values[k] unless k == :time_added
+      end
+    end
+  end
+
+  context "when failed to parse JSON" do
+    it "returns 400 code with 'failed to parse JSON' message" do
+      id = model.first[id_field]
+
+      patch path + id.to_s, "[{dkjghk: 10, dfgf}]"
+
+      expect(last_response.status).to eq 400
+      expect(last_response.body).to eq "failed to parse JSON"
+    end
+  end
+
+  context "when sent JSON is not a hash" do
+    it "returns code 400 with 'invalid request body format' message" do
+      id = model.first[id_field]
+
+      patch path + id.to_s, "[]"
+
+      expect(last_response.status).to eq 400
+      expect(last_response.body).to eq "invalid request body format"
+    end
+  end
+
+  context "when the hash contains a non-string key" do
+    it "returns code 400 with 'invalid request body format' message" do
+      id = model.first[id_field]
+
+      corrupt = data.dup
+      corrupt[1] = 2
+      patch path + id.to_s, corrupt.to_json
+
+      expect(last_response.status).to eq 400
+      expect(last_response.body).to eq 'invalid request body format'
+    end
+  end
+
+  context "when the hash has a redundant field" do
+    it "returns code 400 with 'invalid request body format' message" do
+      id = model.first[id_field]
+
+      corrupt = data.dup
+      corrupt[id_field.to_s] = 2
+      patch path + id.to_s, corrupt.to_json
+
+      expect(last_response.status).to eq 400
+      expect(last_response.body).to eq 'invalid request body format'
+    end
+  end
+
+  context "when the hash values have mismatched data types" do
+    it "returns code 400 with 'invalid request body format' message" do
+      id = model.first[id_field]
+
+      corrupt = data.dup
+      corrupt[data.keys[0]] = Hash.new
+
+      patch path + id.to_s, corrupt.to_json
+
+      expect(last_response.status).to eq 400
+      expect(last_response.body).to eq 'invalid request body format'
     end
   end
 end
@@ -69,6 +272,8 @@ RSpec.describe "Mad Scientists web-service" do
                      galaxy_destruction_attempts: 0)
     Scientist.create(name: "Emmett Brown", madness_level: 7,
                      galaxy_destruction_attempts: 0)
+    Scientist.create(name: "No Inventions", madness_level: 20,
+                     galaxy_destruction_attempts: 4)
 
     Device.create(
         name: "Atomic bomb",
@@ -85,231 +290,59 @@ RSpec.describe "Mad Scientists web-service" do
   end
 
   describe "#get '/scientists'" do
-    context "when there are no filters" do
-      it "returns all records" do
-        get '/scientists'
-
-        expect(last_response).to be_ok
-        expect(last_response.body).to eq Scientist.all.to_json
-      end
-    end
+    it_behaves_like "get all request", Scientist, 'scientists'
   end
 
   describe "#get '/scientists/:id'" do
-    context "when the database has the record with the given id" do
-      it "returns the record with the given id" do
-        id = Scientist.first[:scientist_id]
-        get 'scientists/' + id.to_s
-
-        expect(last_response).to be_ok
-        expect(last_response.body).to eq Scientist.first.to_json
-      end
-    end
-
-    it_behaves_like "access by id", Scientist, :get, 'scientists/'
+    it_behaves_like "get by id request",
+        Scientist, '/scientists/', :scientist_id
   end
 
   describe "#post '/scientists'" do
-    context "when every record in the array has all the necessary fields" +
-      " and no redundant ones" do
-      it "adds new records" do
-        data = [
-          {
-            'name' => "One",
-            'madness_level' => 10,
-            'galaxy_destruction_attempts' => 12,
-          },
-          {
-            'name' => "Two",
-            'madness_level' => 80,
-            'galaxy_destruction_attempts' => 1024,
-          }
-        ]
-
-        post '/scientists', data.to_json
-
-        expect(last_response.status).to eq 204
-        
-        get '/scientists'
-        result = JSON.parse(last_response.body)[-2..-1]
-
-        (-2..-1).each do |index|
-          data[index].keys.each do |key|
-            expect(result[index][key]).to eq data[index][key]
-          end
-        end
-      end
-    end
-
-    context "when failed to parse JSON" do
-      it "returns 400 code with 'failed to parse JSON' message" do
-        post '/scientists', "[{dkjghk: 10, dfgf}]"
-        expect(last_response.status).to eq 400
-        expect(last_response.body).to eq "failed to parse JSON"
-      end
-    end
-
-    context "when sent JSON is not an array of hashes" do
-      context "when sent data is not an array" do
-        it "returns code 400 with 'invalid request body format' message" do
-          post '/scientists', {"koo" => 123}.to_json
-
-          expect(last_response.status).to eq 400
-          expect(last_response.body).to eq 'invalid request body format'
-        end
-      end
-
-      context "when the array contains a non-hash element" do
-        it "returns code 400 with 'invalid request body format' message" do
-          post '/scientists', [{}, {}, [], {}].to_json
-
-          expect(last_response.status).to eq 400
-          expect(last_response.body).to eq 'invalid request body format'
-        end
-      end
-
-      context "when one of the hashes contains a non-string key" do
-        it "returns code 400 with 'invalid request body format' message" do
-          post '/scientists', [{"name" => "One", "madness_level" => 6,
-                                10 => 1}].to_json
-
-          expect(last_response.status).to eq 400
-          expect(last_response.body).to eq 'invalid request body format'
-        end
-      end
-
-      context "when there is a missing field in one of the records" do
-        it "returns code 400 with 'invalid request body format' message" do
-          data = [
-            {
-              "name" => "One",
-              "madness_level" => 10
-            }
-          ]
-          post '/scientists', data.to_json
-
-          expect(last_response.status).to eq 400
-          expect(last_response.body).to eq 'invalid request body format'
-        end
-      end
-
-      context "when there is a redundant field in one of the records" do
-        it "returns code 400 with 'invalid request body format' message" do
-          data = [
-            {
-              "name" => "One",
-              "madness_level" => 10,
-              "galaxy_destruction_attempts" => 8,
-              "height" => 180,
-            }
-          ]
-          post '/scientists', data.to_json
-
-          expect(last_response.status).to eq 400
-          expect(last_response.body).to eq 'invalid request body format'
-        end
-      end
-
-      context "when a record has mismatched data types" do
-        it "returns code 400 with 'invalid request body format' message" do
-          data = [
-            {
-              "name" => "One",
-              "madness_level" => 10,
-              "galaxy_destruction_attempts" => "eight"
-            }
-          ]
-
-          post '/scientists', data.to_json
-
-          expect(last_response.status).to eq 400
-          expect(last_response.body).to eq 'invalid request body format'
-        end
-      end
-    end
+    it_behaves_like "post request", Scientist, '/scientists', [
+      {
+        'name' => "One",
+        'madness_level' => 10,
+        'galaxy_destruction_attempts' => 12,
+      },
+      {
+        'name' => "Two",
+        'madness_level' => 80,
+        'galaxy_destruction_attempts' => 1024,
+      }
+    ]
   end
 
   describe "#patch '/scientists/:id'" do
-    it_behaves_like "access by id", Scientist, :patch, 'scientists/',
-      {"madness_level" => 200, "galaxy_destruction_attempts" => 500}
+    data = {"madness_level" => 200, "galaxy_destruction_attempts" => 500}
+    it_behaves_like "access by id", Scientist, :patch, 'scientists/', data
 
-    context "when the request body is a hash containing a subset of model" +
-        "fields except scientist_id with proper data types" do
-      it "updates the record" do
-        id = Scientist.first[:scientist_id]
-        name = Scientist.first[:name]
+    it_behaves_like "patch request",
+            Scientist, :scientist_id, 'scientists/', data
+  end
 
-        data = {"madness_level" => 200, "galaxy_destruction_attempts" => 500}
-        patch 'scientists/' + id.to_s, data.to_json
+  describe "#delete '/scientists/:id'" do
+    it_behaves_like "access by id", Scientist, :delete, '/scientists/'
+
+    context "if the scientist has no devices" do
+      it "deletes the record with the given id" do
+        id = Scientist[name: "No Inventions"][:scientist_id]
+
+        delete '/scientists/' + id.to_s
 
         expect(last_response).to be_ok
-
-        expect(Scientist.first[:name]).to eq name
-        expect(Scientist.first[:madness_level]).to eq 200
-        expect(Scientist.first[:galaxy_destruction_attempts]).to eq 500
+        expect(Scientist[name: "No Inventions"]).to be_nil
       end
     end
 
-    context "when failed to parse JSON" do
-      it "returns 400 code with 'failed to parse JSON' message" do
-        id = Scientist.first[:scientist_id]
+    context "if the scientist has a device" do
+      it "returns code 400 with 'foreign key constraint failed' message" do
+        id = Scientist[name: "Richard Feynman"][:scientist_id]
 
-        patch 'scientists/' + id.to_s, "[{dkjghk: 10, dfgf}]"
-
-        expect(last_response.status).to eq 400
-        expect(last_response.body).to eq "failed to parse JSON"
-      end
-    end
-
-    context "when sent JSON is not a hash" do
-      it "returns code 400 with 'invalid request body format' message" do
-        id = Scientist.first[:scientist_id]
-
-        patch 'scientists/' + id.to_s, "[]"
+        delete '/scientists/' + id.to_s
 
         expect(last_response.status).to eq 400
-        expect(last_response.body).to eq "invalid request body format"
-      end
-    end
-
-    context "when the hash contains a non-string key" do
-      it "returns code 400 with 'invalid request body format' message" do
-        id = Scientist.first[:scientist_id]
-
-        patch 'scientists/' + id.to_s, {"madness_level" => 10, 1 => 2}.to_json
-
-        expect(last_response.status).to eq 400
-        expect(last_response.body).to eq 'invalid request body format'
-      end
-    end
-
-    context "when the hash has a redundant field" do
-      it "returns code 400 with 'invalid request body format' message" do
-        id = Scientist.first[:scientist_id]
-
-        patch 'scientists/' + id.to_s, {"madness_level" => 10,
-                                        "scientist_id" => 2}.to_json
-
-        expect(last_response.status).to eq 400
-        expect(last_response.body).to eq 'invalid request body format'
-      end
-    end
-
-    context "when the hash values have mismatched data types" do
-      it "returns code 400 with 'invalid request body format' message" do
-        id = Scientist.first[:scientist_id]
-
-        data =
-          {
-            "name" => "One",
-            "madness_level" => 10,
-            "galaxy_destruction_attempts" => "eight"
-          }
-
-        patch '/scientists/' + id.to_s, data.to_json
-
-        expect(last_response.status).to eq 400
-        expect(last_response.body).to eq 'invalid request body format'
+        expect(last_response.body).to eq 'foreign key constraint failed'
       end
     end
   end
