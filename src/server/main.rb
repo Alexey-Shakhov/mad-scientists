@@ -6,11 +6,10 @@ Sequel::Model.plugin :json_serializer
 
 # The $db variable needs to be initialized before requiring this module
 
+# Helper functions
 def check_record_integrity(fields, rec, subset: false)
   if !subset
-    if rec.size != fields.size
-      return false
-    end
+    return false if rec.size != fields.size
   end
 
   rec.keys.each do |key|
@@ -42,6 +41,62 @@ def parse_id(string)
   num
 end
 
+# Request templates
+def get_by_id(model, id)
+  num = parse_id(id)
+  if !num
+    halt 400
+  end
+
+  record = model[{model.primary_key => num}]
+  if !record
+    halt 404
+  else
+    body record.to_json
+  end
+end
+
+def post(model, request)
+  begin
+    records = JSON.parse request.body.read
+  rescue JSON::ParserError
+    halt 400, "failed to parse JSON"
+  end
+
+  if records.class != Array
+    halt 400, "invalid request body format"
+  end
+
+  fields = {}
+  model.db_schema.each do |field, info|
+    next if info[:primary_key] or field == :time_added
+
+    type = info[:type]
+    fields[field] = case type
+      when :string
+        String
+      when :integer
+        Integer
+    end
+  end
+
+  records.each do |rec|
+    if rec.class != Hash
+      halt 400, "invalid request body format"
+    end
+
+    if !check_record_integrity(fields, rec)
+      halt 400, "invalid request body format"
+    end
+  end
+
+  records.each do |rec|
+    model.create(rec)
+  end
+
+  status 204
+end
+
 class Scientist < Sequel::Model($db[:scientists])
   def before_save
     self.time_added = Time.now
@@ -59,48 +114,11 @@ get '/scientists' do
 end
 
 get '/scientists/:id' do |id|
-  num = parse_id(id)
-  if !num
-    halt 400
-  end
-
-  record = Scientist[scientist_id: num]
-  if !record
-    halt 404
-  else
-    body record.to_json
-  end
+  get_by_id(Scientist, id)
 end
 
 post '/scientists' do
-  begin
-    records = JSON.parse request.body.read
-  rescue JSON::ParserError
-    halt 400, "failed to parse JSON"
-  end
-
-  if records.class != Array
-    halt 400, "invalid request body format"
-  end
-
-  fields = {name: String, madness_level: Integer,
-            galaxy_destruction_attempts: Integer}
-
-  records.each do |rec|
-    if rec.class != Hash
-      halt 400, "invalid request body format"
-    end
-
-    if !check_record_integrity(fields, rec)
-      halt 400, "invalid request body format"
-    end
-  end
-
-  records.each do |rec|
-    Scientist.create(rec)
-  end
-
-  status 204
+  post(Scientist, request)
 end
 
 patch '/scientists/:id' do |id|
@@ -156,4 +174,63 @@ end
 
 get '/devices' do
   Device.all.to_json
+end
+
+get '/devices/:id' do |id|
+  get_by_id(Device, id)
+end
+
+post '/devices' do
+  post(Device, request)
+end
+
+patch '/devices/:id' do |id|
+  num = parse_id(id)
+  if !num
+    halt 400
+  end
+
+  record = Device[device_id: num]
+  if !record
+    halt 404
+  end
+
+  begin
+    update = JSON.parse request.body.read
+  rescue JSON::ParserError
+    halt 400, "failed to parse JSON"
+  end
+
+  if update.class != Hash
+    halt 400, "invalid request body format"
+  end
+
+  fields = {name: String, power: Integer,
+            scientist_id: Integer}
+
+  if !check_record_integrity(fields, update, subset: true)
+      halt 400, "invalid request body format"
+  end
+
+  update.keys.each do |key|
+    record[key.to_sym] = update[key]
+  end
+  record.save
+end
+
+delete '/devices/:id' do |id|
+  num = parse_id(id)
+  if !num
+    halt 400
+  end
+
+  if !Device[device_id: num]
+    halt 404
+  end
+
+  begin
+    Device[device_id: num].delete
+  rescue Sequel::ForeignKeyConstraintViolation
+    halt 400, 'foreign key constraint failed'
+  end
 end
