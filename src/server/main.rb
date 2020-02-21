@@ -7,37 +7,21 @@ Sequel::Model.plugin :json_serializer
 
 # Helper functions
 def check_record_integrity(fields, rec, subset: false)
-  if !subset
-    return false if rec.size != fields.size
-  end
+  return false if !subset and rec.size != fields.size
 
   rec.keys.each do |key|
-    if not fields.keys.include? key.to_sym
-      return false
-    end
-  end
-
-  rec.keys.each do |key|
-    if rec[key].class != fields[key.to_sym]
-      return false
-    end
+    return false if not fields.keys.include? key.to_sym or
+      rec[key].class != fields[key.to_sym]
   end
 
   true
 end
 
 def parse_id(string)
-  if !string.match(/^(\d)+$/)
-    return nil
-  end
-
+  return nil if !string.match(/^(\d)+$/)
   num = Integer(string)
 
-  if num < 1
-    return nil
-  end
-
-  num
+  return nil if num < 1 else num
 end
 
 def schema_fields(model)
@@ -53,22 +37,17 @@ def schema_fields(model)
         Integer
     end
   end
+
   fields
 end
 
 # Request templates
 def get_by_id(model, id)
   num = parse_id(id)
-  if !num
-    halt 400
-  end
+  halt 400 if !num
 
   record = model[{model.primary_key => num}]
-  if !record
-    halt 404
-  else
-    body record.to_json
-  end
+  halt 404 if !record else body record.to_json
 end
 
 def post(model, request)
@@ -102,14 +81,10 @@ end
 
 def patch(model, id)
   num = parse_id(id)
-  if !num
-    halt 400
-  end
+  halt 400 if !num
 
   record = model[{model.primary_key => num}]
-  if !record
-    halt 404
-  end
+  halt 404 if !record
 
   begin
     update = JSON.parse request.body.read
@@ -135,9 +110,7 @@ end
 
 def delete(model, id)
   num = parse_id(id)
-  if !num
-    halt 400
-  end
+  halt 404 if !num
 
   if !model[{model.primary_key => num}]
     halt 404
