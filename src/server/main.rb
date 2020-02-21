@@ -41,6 +41,22 @@ def parse_id(string)
   num
 end
 
+def schema_fields(model)
+  fields = {}
+  model.db_schema.each do |field, info|
+    next if info[:primary_key] or field == :time_added
+
+    type = info[:type]
+    fields[field] = case type
+      when :string
+        String
+      when :integer
+        Integer
+    end
+  end
+  fields
+end
+
 # Request templates
 def get_by_id(model, id)
   num = parse_id(id)
@@ -67,19 +83,7 @@ def post(model, request)
     halt 400, "invalid request body format"
   end
 
-  fields = {}
-  model.db_schema.each do |field, info|
-    next if info[:primary_key] or field == :time_added
-
-    type = info[:type]
-    fields[field] = case type
-      when :string
-        String
-      when :integer
-        Integer
-    end
-  end
-
+  fields = schema_fields model
   records.each do |rec|
     if rec.class != Hash
       halt 400, "invalid request body format"
@@ -95,6 +99,56 @@ def post(model, request)
   end
 
   status 204
+end
+
+def patch(model, id)
+  num = parse_id(id)
+  if !num
+    halt 400
+  end
+
+  record = model[{model.primary_key => num}]
+  if !record
+    halt 404
+  end
+
+  begin
+    update = JSON.parse request.body.read
+  rescue JSON::ParserError
+    halt 400, "failed to parse JSON"
+  end
+
+  if update.class != Hash
+    halt 400, "invalid request body format"
+  end
+
+  fields = schema_fields(model)
+
+  if !check_record_integrity(fields, update, subset: true)
+    halt 400, "invalid request body format"
+  end
+
+  update.keys.each do |key|
+    record[key.to_sym] = update[key]
+  end
+  record.save
+end
+
+def delete(model, id)
+  num = parse_id(id)
+  if !num
+    halt 400
+  end
+
+  if !model[{model.primary_key => num}]
+    halt 404
+  end
+
+  begin
+    model[{model.primary_key => num}].delete
+  rescue Sequel::ForeignKeyConstraintViolation
+    halt 400, 'foreign key constraint failed'
+  end
 end
 
 class Scientist < Sequel::Model($db[:scientists])
@@ -122,54 +176,11 @@ post '/scientists' do
 end
 
 patch '/scientists/:id' do |id|
-  num = parse_id(id)
-  if !num
-    halt 400
-  end
-
-  record = Scientist[scientist_id: num]
-  if !record
-    halt 404
-  end
-
-  begin
-    update = JSON.parse request.body.read
-  rescue JSON::ParserError
-    halt 400, "failed to parse JSON"
-  end
-
-  if update.class != Hash
-    halt 400, "invalid request body format"
-  end
-
-  fields = {name: String, madness_level: Integer,
-            galaxy_destruction_attempts: Integer}
-
-  if !check_record_integrity(fields, update, subset: true)
-      halt 400, "invalid request body format"
-  end
-
-  update.keys.each do |key|
-    record[key.to_sym] = update[key]
-  end
-  record.save
+  patch(Scientist, id)
 end
 
 delete '/scientists/:id' do |id|
-  num = parse_id(id)
-  if !num
-    halt 400
-  end
-
-  if !Scientist[scientist_id: num]
-    halt 404
-  end
-
-  begin
-    Scientist[scientist_id: num].delete
-  rescue Sequel::ForeignKeyConstraintViolation
-    halt 400, 'foreign key constraint failed'
-  end
+  delete(Scientist, id)
 end
 
 get '/devices' do
@@ -185,52 +196,9 @@ post '/devices' do
 end
 
 patch '/devices/:id' do |id|
-  num = parse_id(id)
-  if !num
-    halt 400
-  end
-
-  record = Device[device_id: num]
-  if !record
-    halt 404
-  end
-
-  begin
-    update = JSON.parse request.body.read
-  rescue JSON::ParserError
-    halt 400, "failed to parse JSON"
-  end
-
-  if update.class != Hash
-    halt 400, "invalid request body format"
-  end
-
-  fields = {name: String, power: Integer,
-            scientist_id: Integer}
-
-  if !check_record_integrity(fields, update, subset: true)
-      halt 400, "invalid request body format"
-  end
-
-  update.keys.each do |key|
-    record[key.to_sym] = update[key]
-  end
-  record.save
+  patch(Device, id)
 end
 
 delete '/devices/:id' do |id|
-  num = parse_id(id)
-  if !num
-    halt 400
-  end
-
-  if !Device[device_id: num]
-    halt 404
-  end
-
-  begin
-    Device[device_id: num].delete
-  rescue Sequel::ForeignKeyConstraintViolation
-    halt 400, 'foreign key constraint failed'
-  end
+  delete(Device, id)
 end
