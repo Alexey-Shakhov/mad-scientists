@@ -1,6 +1,5 @@
 require 'sinatra'
 require 'sequel'
-require 'net/http'
 require 'set'
 Sequel::Model.plugin :json_serializer
 
