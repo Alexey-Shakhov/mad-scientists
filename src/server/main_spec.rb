@@ -22,9 +22,9 @@ RSpec.shared_examples "access by id" do
     end
 
     context "when :id is not a proper id" do
-      context "when :id is an integer less than 1" do
+      context "when :id is a negative integer" do
         it "returns code 400" do
-          uri = path + "0"
+          uri = path + "-2"
           if data
             send method, uri, data
           else

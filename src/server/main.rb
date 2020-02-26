@@ -19,9 +19,7 @@ end
 
 def parse_id(string)
   return nil if !string.match(/^(\d)+$/)
-  num = Integer(string)
-
-  return nil if num < 1 else num
+  Integer(string)
 end
 
 def schema_fields(model)
@@ -47,7 +45,9 @@ def get_by_id(model, id)
   halt 400 if !num
 
   record = model[{model.primary_key => num}]
-  halt 404 if !record else body record.to_json
+  halt 404 if !record
+
+  body record.to_json
 end
 
 def post(model, request)
@@ -110,7 +110,7 @@ end
 
 def delete(model, id)
   num = parse_id(id)
-  halt 404 if !num
+  halt 400 if !num
 
   if !model[{model.primary_key => num}]
     halt 404
