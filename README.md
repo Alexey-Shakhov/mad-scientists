@@ -10,6 +10,10 @@ bundle install
 ```
 
 ## Configuration
+Create the database and apply migrations to it:
+```shell
+sequel -m mad-scientists/migrations sqlite:///path/to/db
+```
 Set the appropriate database settings in the `database.rb` file in the `config` folder.
 
 ## Usage
