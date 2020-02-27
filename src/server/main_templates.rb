@@ -1,3 +1,6 @@
+require 'sinatra'
+require 'sequel'
+
 # Request templates
 def get_by_id(model, id)
   num = parse_id(id)

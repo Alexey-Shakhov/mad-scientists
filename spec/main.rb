@@ -258,8 +258,8 @@ end
 RSpec.describe "Mad Scientists web-service" do
   include Rack::Test::Methods
 
-  $db = Sequel.sqlite(cache_schema: false)
-  Sequel::Migrator.apply($db, '../src/migrations')
+  db = Sequel.sqlite(cache_schema: false)
+  Sequel::Migrator.apply(db, '../migrations')
 
   require_relative '../src/server/main'
 

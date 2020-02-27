@@ -4,7 +4,7 @@ Sequel::Model.plugin :json_serializer
 require_relative 'main_helpers'
 require_relative 'main_templates'
 
-raise RuntimeError, "Database not initialized" unless $db
+require_relative '../../config/database' unless ENV['APP_ENV'] == 'test'
 
 require_relative 'models/scientist'
 require_relative 'models/device'
