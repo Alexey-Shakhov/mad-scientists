@@ -1,10 +1,10 @@
 require 'sequel'
 
-adapter = 'sqlite'
-db = '/home/alexey/db'
+adapter = 'mysql2'
+db = 'koo'
 user = ''
 password = ''
-host = ''
+host = 'localhost'
 port = 0
 
 Sequel.connect(

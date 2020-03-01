@@ -4,6 +4,7 @@ GEM
     diff-lcs (1.3)
     mustermann (1.1.1)
       ruby2_keywords (~> 0.0.1)
+    mysql2 (0.5.3)
     rack (2.2.2)
     rack-protection (2.0.8.1)
       rack
@@ -35,6 +36,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  mysql2
   rack-test
   rspec
   sequel
