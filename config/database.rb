@@ -1,7 +1,7 @@
 require 'sequel'
 
 adapter = 'mysql2'
-db = 'koo'
+db = 'mad-scientists'
 user = ''
 password = ''
 host = 'localhost'
