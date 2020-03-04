@@ -1,5 +1,5 @@
 # mad-scientists
-A toy microservice in Ruby
+Mad Scientists is a toy microservice written in Ruby with Sinatra and Sequel that allows users to fetch and manage data about mad scientists and their unbelievable devices using REST API requests.
 
 ## Installation
 ```shell
