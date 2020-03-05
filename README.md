@@ -12,12 +12,13 @@ bundle install
 ## Configuration
 Create the database and apply migrations to it:
 ```shell
-sequel -m mad-scientists/migrations sqlite:///path/to/db
+mysqladmin create mad-scientists
+sequel -m mad-scientists/migrations mysql2://localhost/mad-scientists
 ```
 Set the appropriate database settings in the `database.rb` file in the `config` folder.
 
 ## Usage
 ```shell
 cd mad-scientists
-rackup
+sudo puma
 ```
