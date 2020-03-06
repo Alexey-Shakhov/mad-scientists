@@ -24,14 +24,59 @@ get '/scientists/:id/devices' do |id|
 end
 
 post '/scientists' do
-  post(Scientist, request) do |rec|
+  begin
+    records = JSON.parse request.body.read
+  rescue JSON::ParserError
+    halt 400, 'failed to parse JSON'
+  end
+
+  if records.class != Array
+    halt 400, 'request body must be an array'
+  end
+
+  fields = schema_fields Scientist
+
+  records.each do |rec|
+    if rec.class != Hash
+      halt 400, 'array must only contain hashes'
+    end
+  end
+
+  names = []
+  records.each do |rec|
+    case check_record_integrity(fields, rec)
+    when :missing_field
+      halt 400, 'missing field in record'
+    when :redundant_field
+      halt 400, 'redundant field in record'
+    when :invalid_type
+      halt 400, 'invalid data type in record'
+    end
+
     if rec['madness_level'] < 0
       halt 400, 'negative madness level'
     end
+
     if rec['galaxy_destruction_attempts'] < 0
       halt 400, 'negative number of galaxy destruction attempts'
     end
+
+    if names.include? rec['name']
+      halt 400, 'scientists with the same name'
+    end
+
+    if Scientist[name: rec['name']]
+      halt 400, "name #{rec['name']} already in database"
+    end
+
+    names << rec['name']
   end
+
+  records.each do |rec|
+    Scientist.create(rec)
+  end
+
+  status 204
 end
 
 patch '/scientists/:id' do |id|

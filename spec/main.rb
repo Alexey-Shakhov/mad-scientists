@@ -317,6 +317,50 @@ RSpec.describe "Mad Scientists web-service" do
       }
     end
 
+    context 'when trying to post multiple scientists with the same name' do
+      it 'returns code 400 with "scientists with the same name" message' do
+        data = [ 
+          {
+            'name' => "One",
+            'madness_level' => 10,
+            'galaxy_destruction_attempts' => 12,
+          },
+          {
+            'name' => "One",
+            'madness_level' => 1,
+            'galaxy_destruction_attempts' => 1024,
+          }
+        ] 
+
+        post 'scientists', data.to_json
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq 'scientists with the same name'
+      end
+    end
+
+    context 'when trying to post a scientist with an already taken name' do
+      it 'returns code 400 with "scientist with ' +
+          'name [duplicate name] already in database" message' do
+        name = "Richard Feynman"
+        data = [
+          {
+            'name' => name,
+            'madness_level' => 10,
+            'galaxy_destruction_attempts' => 12,
+          },
+          {
+            'name' => "One",
+            'madness_level' => 1,
+            'galaxy_destruction_attempts' => 1024,
+          }
+        ]
+
+        post 'scientists', data.to_json
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq "name #{name} already in database"
+      end
+    end
+
     context 'when madness_level is negative in a record' do
       it 'returns code 400 with "negative madness level" message' do
         data = [ 
