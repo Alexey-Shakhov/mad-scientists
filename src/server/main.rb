@@ -54,6 +54,54 @@ post '/devices' do
   post(Device, request)
 end
 
+post '/scientists/:id/devices' do |id|
+  get_by_id(Scientist, id) do |record|
+    begin
+      records = JSON.parse request.body.read
+    rescue JSON::ParserError
+      halt 400, 'failed to parse JSON'
+    end
+
+    if records.class != Array
+      halt 400, 'request body must be an array'
+    end
+
+    fields = schema_fields Device
+
+    records.each do |rec|
+      if rec.class != Hash
+        halt 400, 'array must only contain hashes'
+      end
+    end
+
+    records = records.map do |rec|
+      rec[:scientist_id] = Integer(id)
+      rec
+    end
+
+    records.each do |rec|
+      case check_record_integrity(fields, rec)
+      when :missing_field
+        halt 400, 'missing field in record'
+      when :redundant_field
+        halt 400, 'redundant field in record'
+      when :invalid_type
+        halt 400, 'invalid data type in record'
+      end
+
+      if rec["power"] < 0
+        halt 400, 'negative power'
+      end
+    end
+
+    records.each do |rec|
+      Device.create(rec)
+    end
+
+    status 204
+  end
+end
+
 patch '/devices/:id' do |id|
   patch(Device, id)
 end

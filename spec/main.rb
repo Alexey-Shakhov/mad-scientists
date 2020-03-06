@@ -420,6 +420,148 @@ RSpec.describe "Mad Scientists web-service" do
     end
   end
 
+  describe "#post 'scientists/:id/devices'" do
+    let(:id) { Scientist[name: 'Koo'].scientist_id }
+    let(:path) { 'scientists/%s/devices' % [id] }
+
+    context "when every record in the array has all the necessary fields " +
+        "and no redundant ones" do
+      it "adds new records" do
+        data = [
+          {
+            'name' => "One",
+            'power' => 10,
+          },
+          {
+            'name' => "Two",
+            'power' => 80,
+          }
+        ]
+
+        post path, data.to_json
+
+        expect(last_response.status).to eq 204
+        
+        result = Device.all[-data.length..-1].map { |rec| rec.values }
+
+        (-data.length..-1).each do |index|
+          data[index].keys.each do |key|
+            expect(result[index][key.to_sym]).to eq data[index][key]
+          end
+
+          expect(result[index][:scientist_id]).to eq id
+        end
+      end
+    end
+
+    context "when failed to parse JSON" do
+      it "returns 400 code with 'failed to parse JSON' message" do
+        post path, "[{dkjghk: 10, dfgf}]"
+
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq "failed to parse JSON"
+      end
+    end
+
+    context "when sent data is not an array" do
+      it "returns code 400 with 'request body must be an array' message" do
+        post path, {"koo" => 123}.to_json
+
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq 'request body must be an array'
+      end
+    end
+
+    context "when the array contains a non-hash element" do
+      it "returns code 400 with 'array must only contain hashes' message" do
+        post path, [{}, [], {}, {}].to_json
+
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq 'array must only contain hashes'
+      end
+    end
+
+    context "when there is a missing field in one of the records" do
+      it "returns code 400 with 'missing field in record' message" do
+        data = [
+          {
+            'name' => "One",
+            'power' => 10,
+          },
+          {
+            'name' => "Two",
+          }
+        ]
+
+        post path, data.to_json
+
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq 'missing field in record'
+      end
+    end
+
+    context "when there is a redundant field in one of the records" do
+      it "returns code 400 with 'redundant field in record' message" do
+        data = [
+          {
+            'name' => "One",
+            'power' => 10,
+          },
+          {
+            'name' => "Two",
+            'power' => 11,
+            'weight' => 0.2,
+          }
+        ]
+
+        post path, data.to_json
+
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq 'redundant field in record'
+      end
+    end
+
+    context "when a record has mismatched data types" do
+      it "returns code 400 with 'invalid data type in record' message" do
+        data = [
+          {
+            'name' => "One",
+            'power' => 10,
+          },
+          {
+            'name' => "Two",
+            'power' => "eighty",
+          }
+        ]
+
+        post path, data.to_json
+
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq 'invalid data type in record'
+      end
+    end
+
+    context "when power is negative in a record" do
+      it "returns code 400 with 'negative power' message" do
+        data = [
+          {
+            'name' => "One",
+            'power' => 10,
+          },
+          {
+            'name' => "Two",
+            'power' => -1,
+          }
+        ]
+
+        post path, data.to_json
+
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq 'negative power'
+      end
+    end
+  end
+
   describe "#patch 'devices/:id'" do
     it_behaves_like "patch request", Device, 'devices/%s',
       {"power" => 200, "name" => "Koo"}
