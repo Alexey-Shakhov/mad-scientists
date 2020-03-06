@@ -18,7 +18,14 @@ get '/scientists/:id' do |id|
 end
 
 post '/scientists' do
-  post(Scientist, request)
+  post(Scientist, request) do |rec|
+    if rec['madness_level'] < 0
+      halt 400, 'negative madness level'
+    end
+    if rec['galaxy_destruction_attempts'] < 0
+      halt 400, 'negative number of galaxy destruction attempts'
+    end
+  end
 end
 
 patch '/scientists/:id' do |id|

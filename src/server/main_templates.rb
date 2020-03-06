@@ -40,6 +40,8 @@ def post(model, request)
     when :invalid_type
       halt 400, 'invalid data type in record'
     end
+
+    yield rec if block_given?
   end
 
   records.each do |rec|

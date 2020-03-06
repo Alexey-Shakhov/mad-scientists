@@ -103,23 +103,21 @@ RSpec.shared_examples 'post request' do |model, path|
     end
   end
 
-  context "when sent JSON is not an array of hashes" do
-    context "when sent data is not an array" do
-      it "returns code 400 with 'request body must be an array' message" do
-        post path, {"koo" => 123}.to_json
+  context "when sent data is not an array" do
+    it "returns code 400 with 'request body must be an array' message" do
+      post path, {"koo" => 123}.to_json
 
-        expect(last_response.status).to eq 400
-        expect(last_response.body).to eq 'request body must be an array'
-      end
+      expect(last_response.status).to eq 400
+      expect(last_response.body).to eq 'request body must be an array'
     end
+  end
 
-    context "when the array contains a non-hash element" do
-      it "returns code 400 with 'array must only contain hashes' message" do
-        post path, [{}, [], {}, {}].to_json
+  context "when the array contains a non-hash element" do
+    it "returns code 400 with 'array must only contain hashes' message" do
+      post path, [{}, [], {}, {}].to_json
 
-        expect(last_response.status).to eq 400
-        expect(last_response.body).to eq 'array must only contain hashes'
-      end
+      expect(last_response.status).to eq 400
+      expect(last_response.body).to eq 'array must only contain hashes'
     end
   end
 
@@ -289,6 +287,50 @@ RSpec.describe "Mad Scientists web-service" do
           }
         ] 
       }
+    end
+
+    context 'when madness_level is negative in a record' do
+      it 'returns code 400 with "negative madness level" message' do
+        data = [ 
+          {
+            'name' => "One",
+            'madness_level' => 10,
+            'galaxy_destruction_attempts' => 12,
+          },
+          {
+            'name' => "Two",
+            'madness_level' => -1,
+            'galaxy_destruction_attempts' => 1024,
+          }
+        ] 
+
+        post 'scientists', data.to_json
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq 'negative madness level'
+      end
+    end
+
+    context 'when galaxy_destruction_attempts is negative in a record' do
+      it 'returns code 400 with' +
+          ' "negative number of galaxy destruction attempts" message' do
+        data = [ 
+          {
+            'name' => "One",
+            'madness_level' => 10,
+            'galaxy_destruction_attempts' => 12,
+          },
+          {
+            'name' => "Two",
+            'madness_level' => 80,
+            'galaxy_destruction_attempts' => -1,
+          }
+        ] 
+
+        post 'scientists', data.to_json
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq(
+            'negative number of galaxy destruction attempts')
+      end
     end
   end
 
