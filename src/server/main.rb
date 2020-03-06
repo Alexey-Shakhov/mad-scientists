@@ -14,7 +14,13 @@ get '/scientists' do
 end
 
 get '/scientists/:id' do |id|
-  get_by_id(Scientist, id)
+  get_by_id(Scientist, id) { |record| body record.to_json }
+end
+
+get '/scientists/:id/devices' do |id|
+  get_by_id(Scientist, id) do |record|
+    body Device.where(scientist_id: record.scientist_id).to_json
+  end
 end
 
 post '/scientists' do
@@ -41,7 +47,7 @@ get '/devices' do
 end
 
 get '/devices/:id' do |id|
-  get_by_id(Device, id)
+  get_by_id(Device, id) { |record| body record.to_json }
 end
 
 post '/devices' do

@@ -1,16 +1,6 @@
+# Request templates
 require 'sinatra'
 require 'sequel'
-
-# Request templates
-def get_by_id(model, id)
-  num = parse_id(id)
-  halt 400 if !num
-
-  record = model[{model.primary_key => num}]
-  halt 404 if !record
-
-  body record.to_json
-end
 
 def post(model, request)
   begin

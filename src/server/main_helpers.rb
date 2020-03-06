@@ -1,6 +1,16 @@
 # Helper functions
 require 'sequel'
 
+def get_by_id(model, id)
+  num = parse_id(id)
+  halt 400 if !num
+
+  record = model[{model.primary_key => num}]
+  halt 404 if !record
+
+  yield record
+end
+
 def check_record_integrity(fields, rec, subset: false)
   return :missing_field if !subset and rec.size < fields.size
 

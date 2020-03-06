@@ -248,6 +248,8 @@ RSpec.describe "Mad Scientists web-service" do
                      galaxy_destruction_attempts: 0)
     Scientist.create(name: "No Inventions", madness_level: 20,
                      galaxy_destruction_attempts: 4)
+    Scientist.create(name: "Koo", madness_level: 20,
+                     galaxy_destruction_attempts: 4)
 
     Device.create(
         name: "Atomic bomb",
@@ -256,6 +258,18 @@ RSpec.describe "Mad Scientists web-service" do
     Device.create(
         name: "DeLorean time machine",
         scientist_id: Scientist.dataset[name: "Emmett Brown"].scientist_id,
+        power: 0)
+    Device.create(
+        name: "Koo1",
+        scientist_id: Scientist.dataset[name: "Koo"].scientist_id,
+        power: 0)
+    Device.create(
+        name: "Koo2",
+        scientist_id: Scientist.dataset[name: "Koo"].scientist_id,
+        power: 0)
+    Device.create(
+        name: "Koo3",
+        scientist_id: Scientist.dataset[name: "Koo"].scientist_id,
         power: 0)
   end
 
@@ -269,6 +283,21 @@ RSpec.describe "Mad Scientists web-service" do
 
   describe "#get 'scientists/:id'" do
     it_behaves_like "get by id request", Scientist, 'scientists/%s'
+  end
+
+  describe "#get 'scientists/:id/devices'" do
+    it_behaves_like "access by id", Scientist, :get, 'scientists/%s/devices'
+
+    context "when the id exists" do
+      it "returns the list of all devices created by the scientist" do
+        id = Scientist[name: 'Koo'].scientist_id
+
+        get 'scientists/%s/devices' % [id]
+
+        expect(last_response).to be_ok
+        expect(last_response.body).to eq Device.where(scientist_id: id).to_json
+      end
+    end
   end
 
   describe "#post 'scientists'" do
