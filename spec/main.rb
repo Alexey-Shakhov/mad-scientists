@@ -10,7 +10,7 @@ RSpec.shared_examples "access by id" do
   context "when the database doesn't have the record with the given id" do
     context "when :id is valid but there is no matching record" do
       it "returns code 404" do
-        uri = path + "32000"
+        uri = path % ["32000"]
         if data
           send method, uri, data
         else
@@ -24,7 +24,7 @@ RSpec.shared_examples "access by id" do
     context "when :id is not a proper id" do
       context "when :id is a negative integer" do
         it "returns code 400" do
-          uri = path + "-2"
+          uri = path % ["-2"]
           if data
             send method, uri, data
           else
@@ -37,7 +37,7 @@ RSpec.shared_examples "access by id" do
 
       context "when :id is not an integer" do
         it "returns code 400" do
-          uri = path + "188.1"
+          uri = path % ["188.1"]
           if data
             send method, uri, data
           else
@@ -67,7 +67,7 @@ RSpec.shared_examples 'get by id request' do |model, path|
     it "returns the record with the given id" do
       id = model.first[model.primary_key]
 
-      get path + id.to_s
+      get path % [id.to_s]
 
       expect(last_response).to be_ok
       expect(last_response.body).to eq model.first.to_json
@@ -168,7 +168,7 @@ RSpec.shared_examples "patch request" do |model, path, data|
       values = model.first.values.dup
       data.each { |k, v| values[k.to_sym] = v }
 
-      patch path + id.to_s, data.to_json
+      patch path % [id.to_s], data.to_json
 
       expect(last_response).to be_ok
 
@@ -182,7 +182,7 @@ RSpec.shared_examples "patch request" do |model, path, data|
     it "returns 400 code with 'failed to parse JSON' message" do
       id = model.first[model.primary_key]
 
-      patch path + id.to_s, "[{dkjghk: 10, dfgf}]"
+      patch path % [id.to_s], "[{dkjghk: 10, dfgf}]"
 
       expect(last_response.status).to eq 400
       expect(last_response.body).to eq "failed to parse JSON"
@@ -193,7 +193,7 @@ RSpec.shared_examples "patch request" do |model, path, data|
     it "returns code 400 with 'request body must be a hash' message" do
       id = model.first[model.primary_key]
 
-      patch path + id.to_s, "[]"
+      patch path % [id.to_s], "[]"
 
       expect(last_response.status).to eq 400
       expect(last_response.body).to eq "request body must be a hash"
@@ -206,7 +206,7 @@ RSpec.shared_examples "patch request" do |model, path, data|
 
       corrupt = data.dup
       corrupt[model.primary_key.to_s] = 2
-      patch path + id.to_s, corrupt.to_json
+      patch path % [id.to_s], corrupt.to_json
 
       expect(last_response.status).to eq 400
       expect(last_response.body).to eq 'redundant field in record'
@@ -220,7 +220,7 @@ RSpec.shared_examples "patch request" do |model, path, data|
       corrupt = data.dup
       corrupt[data.keys[0]] = Hash.new
 
-      patch path + id.to_s, corrupt.to_json
+      patch path % [id.to_s], corrupt.to_json
 
       expect(last_response.status).to eq 400
       expect(last_response.body).to eq 'invalid data type in record'
@@ -268,7 +268,7 @@ RSpec.describe "Mad Scientists web-service" do
   end
 
   describe "#get 'scientists/:id'" do
-    it_behaves_like "get by id request", Scientist, 'scientists/'
+    it_behaves_like "get by id request", Scientist, 'scientists/%s'
   end
 
   describe "#post 'scientists'" do
@@ -335,18 +335,18 @@ RSpec.describe "Mad Scientists web-service" do
   end
 
   describe "#patch 'scientists/:id'" do
-    it_behaves_like "patch request", Scientist, 'scientists/',
+    it_behaves_like "patch request", Scientist, 'scientists/%s',
       {"madness_level" => 200, "galaxy_destruction_attempts" => 500}
   end
 
   describe "#delete 'scientists/:id'" do
-    it_behaves_like "access by id", Scientist, :delete, 'scientists/'
+    it_behaves_like "access by id", Scientist, :delete, 'scientists/%s'
 
     context "if the scientist has no devices" do
       it "deletes the record with the given id" do
         id = Scientist[name: "No Inventions"][:scientist_id]
 
-        delete 'scientists/' + id.to_s
+        delete 'scientists/%s' % [id.to_s]
 
         expect(last_response).to be_ok
         expect(Scientist[name: "No Inventions"]).to be_nil
@@ -357,7 +357,7 @@ RSpec.describe "Mad Scientists web-service" do
       it "returns code 400 with 'foreign key constraint failed' message" do
         id = Scientist[name: "Richard Feynman"][:scientist_id]
 
-        delete 'scientists/' + id.to_s
+        delete 'scientists/%s' % [id.to_s]
 
         expect(last_response.status).to eq 400
         expect(last_response.body).to eq 'foreign key constraint failed'
@@ -370,7 +370,7 @@ RSpec.describe "Mad Scientists web-service" do
   end
 
   describe "#get 'devices/:id'" do
-    it_behaves_like "get by id request", Device, 'devices/'
+    it_behaves_like "get by id request", Device, 'devices/%s'
   end
 
   describe "#post 'devices'" do
@@ -393,17 +393,17 @@ RSpec.describe "Mad Scientists web-service" do
   end
 
   describe "#patch 'devices/:id'" do
-    it_behaves_like "patch request", Device, 'devices/',
+    it_behaves_like "patch request", Device, 'devices/%s',
       {"power" => 200, "name" => "Koo"}
   end
 
   describe "#delete 'devices/:id'" do
-    it_behaves_like "access by id", Device, :delete, 'devices/'
+    it_behaves_like "access by id", Device, :delete, 'devices/%s'
 
     it "deletes the record with the given id" do
       id = Device[name: "Atomic bomb"][:device_id]
 
-      delete 'devices/' + id.to_s
+      delete 'devices/%s' % id.to_s
 
       expect(last_response).to be_ok
       expect(Device[name: "Atomic bomb"]).to be_nil
