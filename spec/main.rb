@@ -604,6 +604,46 @@ RSpec.describe "Mad Scientists web-service" do
         expect(last_response.body).to eq 'negative power'
       end
     end
+
+    context 'when trying to post multiple devices with the same name' do
+      it 'returns code 400 with "devices with the same name" message' do
+        data = [
+          {
+            'name' => "One",
+            'power' => 10,
+          },
+          {
+            'name' => "One",
+            'power' => 80,
+          }
+        ]
+
+        post path, data.to_json
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq 'devices with the same name'
+      end
+    end
+
+    context 'when trying to post a device with an already taken name' do
+      it 'returns code 400 with "device with ' +
+          'name [duplicate name] already in database" message' do
+        name = "Atomic bomb"
+        data = [
+          {
+            'name' => name,
+            'power' => 10,
+          },
+          {
+            'name' => "One",
+            'power' => 80,
+          }
+        ]
+
+        post path, data.to_json
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq "name #{name} already in database"
+      end
+    end
   end
 
   describe "#patch 'devices/:id'" do

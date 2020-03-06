@@ -124,6 +124,7 @@ post '/scientists/:id/devices' do |id|
       rec
     end
 
+    names = []
     records.each do |rec|
       case check_record_integrity(fields, rec)
       when :missing_field
@@ -137,6 +138,16 @@ post '/scientists/:id/devices' do |id|
       if rec["power"] < 0
         halt 400, 'negative power'
       end
+
+      if names.include? rec['name']
+        halt 400, 'devices with the same name'
+      end
+
+      if Device[name: rec['name']]
+        halt 400, "name #{rec['name']} already in database"
+      end
+
+      names << rec['name']
     end
 
     records.each do |rec|
