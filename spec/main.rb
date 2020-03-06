@@ -83,12 +83,11 @@ RSpec.shared_examples 'post request' do |model, path|
 
       expect(last_response.status).to eq 204
       
-      get path
-      result = JSON.parse(last_response.body)[-data.length..-1]
+      result = model.all[-data.length..-1].map { |rec| rec.values }
 
       (-data.length..-1).each do |index|
         data[index].keys.each do |key|
-          expect(result[index][key]).to eq data[index][key]
+          expect(result[index][key.to_sym]).to eq data[index][key]
         end
       end
     end
