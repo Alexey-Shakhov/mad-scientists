@@ -105,69 +105,57 @@ RSpec.shared_examples 'post request' do |model, path|
 
   context "when sent JSON is not an array of hashes" do
     context "when sent data is not an array" do
-      it "returns code 400 with 'invalid request body format' message" do
+      it "returns code 400 with 'request body must be an array' message" do
         post path, {"koo" => 123}.to_json
 
         expect(last_response.status).to eq 400
-        expect(last_response.body).to eq 'invalid request body format'
+        expect(last_response.body).to eq 'request body must be an array'
       end
     end
 
     context "when the array contains a non-hash element" do
-      it "returns code 400 with 'invalid request body format' message" do
-        post path, [{}, {}, [], {}].to_json
+      it "returns code 400 with 'array must only contain hashes' message" do
+        post path, [{}, [], {}, {}].to_json
 
         expect(last_response.status).to eq 400
-        expect(last_response.body).to eq 'invalid request body format'
+        expect(last_response.body).to eq 'array must only contain hashes'
       end
     end
   end
 
-  context "when one of the hashes contains a non-string key" do
-    it "returns code 400 with 'invalid request body format' message" do
-      corrupt = data.dup
-      corrupt[0][2] = 3
-
-      post path, corrupt.to_json
-
-      expect(last_response.status).to eq 400
-      expect(last_response.body).to eq 'invalid request body format'
-    end
-  end
-
   context "when there is a missing field in one of the records" do
-    it "returns code 400 with 'invalid request body format' message" do
+    it "returns code 400 with 'missing field in record' message" do
       corrupt = data.dup
       corrupt[0].delete(data[0].keys[0])
 
       post path, corrupt.to_json
 
       expect(last_response.status).to eq 400
-      expect(last_response.body).to eq 'invalid request body format'
+      expect(last_response.body).to eq 'missing field in record'
     end
   end
 
   context "when there is a redundant field in one of the records" do
-    it "returns code 400 with 'invalid request body format' message" do
+    it "returns code 400 with 'redundant field in record' message" do
       corrupt = data.dup
       corrupt[0]["koo"] = 3
 
       post path, corrupt.to_json
 
       expect(last_response.status).to eq 400
-      expect(last_response.body).to eq 'invalid request body format'
+      expect(last_response.body).to eq 'redundant field in record'
     end
   end
 
   context "when a record has mismatched data types" do
-    it "returns code 400 with 'invalid request body format' message" do
+    it "returns code 400 with 'invalid data type in record' message" do
       corrupt = data.dup
       corrupt[0][data[0].keys[0]] = Hash.new
 
       post path, data.to_json
 
       expect(last_response.status).to eq 400
-      expect(last_response.body).to eq 'invalid request body format'
+      expect(last_response.body).to eq 'invalid data type in record'
     end
   end
 end
@@ -204,31 +192,18 @@ RSpec.shared_examples "patch request" do |model, path, data|
   end
 
   context "when sent JSON is not a hash" do
-    it "returns code 400 with 'invalid request body format' message" do
+    it "returns code 400 with 'request body must be a hash' message" do
       id = model.first[model.primary_key]
 
       patch path + id.to_s, "[]"
 
       expect(last_response.status).to eq 400
-      expect(last_response.body).to eq "invalid request body format"
-    end
-  end
-
-  context "when the hash contains a non-string key" do
-    it "returns code 400 with 'invalid request body format' message" do
-      id = model.first[model.primary_key]
-
-      corrupt = data.dup
-      corrupt[1] = 2
-      patch path + id.to_s, corrupt.to_json
-
-      expect(last_response.status).to eq 400
-      expect(last_response.body).to eq 'invalid request body format'
+      expect(last_response.body).to eq "request body must be a hash"
     end
   end
 
   context "when the hash has a redundant field" do
-    it "returns code 400 with 'invalid request body format' message" do
+    it "returns code 400 with 'redundant field in record' message" do
       id = model.first[model.primary_key]
 
       corrupt = data.dup
@@ -236,12 +211,12 @@ RSpec.shared_examples "patch request" do |model, path, data|
       patch path + id.to_s, corrupt.to_json
 
       expect(last_response.status).to eq 400
-      expect(last_response.body).to eq 'invalid request body format'
+      expect(last_response.body).to eq 'redundant field in record'
     end
   end
 
   context "when the hash values have mismatched data types" do
-    it "returns code 400 with 'invalid request body format' message" do
+    it "returns code 400 with 'invalid data type in record' message" do
       id = model.first[model.primary_key]
 
       corrupt = data.dup
@@ -250,7 +225,7 @@ RSpec.shared_examples "patch request" do |model, path, data|
       patch path + id.to_s, corrupt.to_json
 
       expect(last_response.status).to eq 400
-      expect(last_response.body).to eq 'invalid request body format'
+      expect(last_response.body).to eq 'invalid data type in record'
     end
   end
 end

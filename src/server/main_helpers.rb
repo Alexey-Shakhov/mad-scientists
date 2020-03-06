@@ -1,15 +1,15 @@
+# Helper functions
 require 'sequel'
 
-# Helper functions
 def check_record_integrity(fields, rec, subset: false)
-  return false if !subset and rec.size != fields.size
+  return :missing_field if !subset and rec.size < fields.size
 
   rec.keys.each do |key|
-    return false if not fields.keys.include? key.to_sym or
-      rec[key].class != fields[key.to_sym]
+    return :redundant_field if not fields.keys.include? key.to_sym
+    return :invalid_type if rec[key].class != fields[key.to_sym]
   end
 
-  true
+  :success
 end
 
 def parse_id(string)

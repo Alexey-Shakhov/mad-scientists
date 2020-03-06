@@ -16,21 +16,29 @@ def post(model, request)
   begin
     records = JSON.parse request.body.read
   rescue JSON::ParserError
-    halt 400, "failed to parse JSON"
+    halt 400, 'failed to parse JSON'
   end
 
   if records.class != Array
-    halt 400, "invalid request body format"
+    halt 400, 'request body must be an array'
   end
 
   fields = schema_fields model
+
   records.each do |rec|
     if rec.class != Hash
-      halt 400, "invalid request body format"
+      halt 400, 'array must only contain hashes'
     end
+  end
 
-    if !check_record_integrity(fields, rec)
-      halt 400, "invalid request body format"
+  records.each do |rec|
+    case check_record_integrity(fields, rec)
+    when :missing_field
+      halt 400, 'missing field in record'
+    when :redundant_field
+      halt 400, 'redundant field in record'
+    when :invalid_type
+      halt 400, 'invalid data type in record'
     end
   end
 
@@ -51,17 +59,22 @@ def patch(model, id)
   begin
     update = JSON.parse request.body.read
   rescue JSON::ParserError
-    halt 400, "failed to parse JSON"
+    halt 400, 'failed to parse JSON'
   end
 
   if update.class != Hash
-    halt 400, "invalid request body format"
+    halt 400, 'request body must be a hash'
   end
 
   fields = schema_fields(model)
 
-  if !check_record_integrity(fields, update, subset: true)
-    halt 400, "invalid request body format"
+  case check_record_integrity(fields, update, subset: true)
+  when :missing_field
+    halt 400, 'missing field in record'
+  when :redundant_field
+    halt 400, 'redundant field in record'
+  when :invalid_type
+    halt 400, 'invalid data type in record'
   end
 
   update.keys.each do |key|
