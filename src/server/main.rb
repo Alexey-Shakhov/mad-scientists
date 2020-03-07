@@ -10,14 +10,19 @@ require_relative 'models/scientist'
 require_relative 'models/device'
 
 get '/scientists' do
+  headers "Content-Type" => "application/json"
   Scientist.all.to_json
 end
 
 get '/scientists/:id' do |id|
-  get_by_id(Scientist, id) { |record| body record.to_json }
+  headers "Content-Type" => "application/json"
+  get_by_id(Scientist, id) do |record|
+    body record.to_json
+  end
 end
 
 get '/scientists/:id/devices' do |id|
+  headers "Content-Type" => "application/json"
   get_by_id(Scientist, id) do |record|
     body Device.where(scientist_id: record.scientist_id).to_json
   end
@@ -101,11 +106,15 @@ delete '/scientists/:id' do |id|
 end
 
 get '/devices' do
-  Device.all.to_json
+  headers "Content-Type" => "application/json"
+  body Device.all.to_json
 end
 
 get '/devices/:id' do |id|
-  get_by_id(Device, id) { |record| body record.to_json }
+  headers "Content-Type" => "application/json"
+  get_by_id(Device, id) do |record|
+    body record.to_json
+  end
 end
 
 post '/devices' do

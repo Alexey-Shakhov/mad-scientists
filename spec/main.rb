@@ -56,6 +56,7 @@ RSpec.shared_examples 'get all request' do |model, path|
     get path
 
     expect(last_response).to be_ok
+    expect(last_response.headers["Content-Type"]).to eq "application/json"
     expect(last_response.body).to eq model.all.to_json
   end
 end
@@ -70,6 +71,7 @@ RSpec.shared_examples 'get by id request' do |model, path|
       get path % [id.to_s]
 
       expect(last_response).to be_ok
+      expect(last_response.headers["Content-Type"]).to eq "application/json"
       expect(last_response.body).to eq model.first.to_json
     end
   end
@@ -300,6 +302,7 @@ RSpec.describe "Mad Scientists web-service" do
         get 'scientists/%s/devices' % [id]
 
         expect(last_response).to be_ok
+        expect(last_response.headers["Content-Type"]).to eq "application/json"
         expect(last_response.body).to eq Device.where(scientist_id: id).to_json
       end
     end
