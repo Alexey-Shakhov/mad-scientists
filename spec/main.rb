@@ -494,25 +494,6 @@ RSpec.describe "Mad Scientists web-service" do
     it_behaves_like "get by id request", Device, 'devices/%s'
   end
 
-  describe "#post 'devices'" do
-    it_behaves_like "post request", Device, 'devices' do
-      let(:data) {
-        [
-          {
-            'name' => "One",
-            'scientist_id' => Scientist[name: "Richard Feynman"][:scientist_id],
-            'power' => 10,
-          },
-          {
-            'name' => "Two",
-            'scientist_id' => Scientist[name: "Emmett Brown"][:scientist_id],
-            'power' => 80,
-          }
-        ]
-      }
-    end
-  end
-
   describe "#post 'scientists/:id/devices'" do
     let(:id) { Scientist[name: 'Koo'].scientist_id }
     let(:path) { 'scientists/%s/devices' % [id] }
