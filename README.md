@@ -22,3 +22,9 @@ Set the appropriate database settings in the `database.rb` file in the `config` 
 cd mad-scientists
 sudo puma
 ```
+
+## Running tests
+```shell
+cd spec
+ruby *.rb
+```
