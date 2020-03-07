@@ -171,7 +171,20 @@ post '/scientists/:id/devices' do |id|
 end
 
 patch '/devices/:id' do |id|
-  patch(Device, id)
+  patch(Device, id) do |update|
+    if update['scientist_id'] and
+        Scientist[scientist_id: update['scientist_id']].nil?
+      halt 400, "no such scientist"
+    end
+
+    if update['power'] < 0
+      halt 400, 'negative power'
+    end
+
+    if Device[name: update['name']]
+      halt 400, "name #{update['name']} already in database"
+    end
+  end
 end
 
 delete '/devices/:id' do |id|

@@ -697,7 +697,52 @@ RSpec.describe "Mad Scientists web-service" do
 
   describe "#patch 'devices/:id'" do
     it_behaves_like "patch request", Device, 'devices/%s',
-      {"power" => 200, "name" => "Koo"}
+      {"power" => 200, "name" => "Avalanche"}
+
+    let(:id) { Device[name: 'Atomic bomb'].device_id }
+    let(:path) { 'devices/%s' % [id] }
+
+    context "when trying to give device a nonexistent inventor" do
+      it "returns code 400 with 'no such scientist' message" do
+        data = {
+          'power' => 10,
+          'scientist_id' => 32000,
+        }
+
+        patch path, data.to_json
+
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq 'no such scientist'
+      end
+    end
+
+    context "when power is negative in a record" do
+      it "returns code 400 with 'negative power' message" do
+        data = {
+          'power' => -1,
+        }
+
+        patch path, data.to_json
+
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq 'negative power'
+      end
+    end
+
+    context 'when trying to post a device with an already taken name' do
+      it 'returns code 400 with "device with ' +
+          'name [duplicate name] already in database" message' do
+        name = "DeLorean time machine"
+        data = {
+          'name' => name,
+          'power' => 10,
+        }
+
+        patch path, data.to_json
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq "name #{name} already in database"
+      end
+    end
   end
 
   describe "#delete 'devices/:id'" do
