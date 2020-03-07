@@ -171,7 +171,7 @@ RSpec.shared_examples "patch request" do |model, path, data|
 
       patch path % [id.to_s], data.to_json
 
-      expect(last_response).to be_ok
+      expect(last_response.status).to eq 204
 
       model.first.values.each do |k, v|
         expect(model.first.values[k]).to eq values[k] unless k == :time_added

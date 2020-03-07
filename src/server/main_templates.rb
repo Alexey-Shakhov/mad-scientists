@@ -75,6 +75,8 @@ def patch(model, id)
     record[key.to_sym] = update[key]
   end
   record.save
+
+  status 204
 end
 
 def delete(model, id)
