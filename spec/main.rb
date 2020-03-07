@@ -517,6 +517,9 @@ RSpec.describe "Mad Scientists web-service" do
     let(:id) { Scientist[name: 'Koo'].scientist_id }
     let(:path) { 'scientists/%s/devices' % [id] }
 
+    it_behaves_like "access by id",
+          Scientist, :post, 'scientists/%s/devices'
+
     context "when every record in the array has all the necessary fields " +
         "and no redundant ones" do
       it "adds new records" do
