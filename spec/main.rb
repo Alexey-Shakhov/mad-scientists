@@ -163,6 +163,8 @@ RSpec.shared_examples "patch request" do |model, path, data|
   context "when the request body is a hash containing a subset of model" +
       "fields except #{model.primary_key} with proper data types" do
     it "updates the record" do
+      if data.nil? then data = var_data end
+
       id = model.first[model.primary_key]
       values = model.first.values.dup
       data.each { |k, v| values[k.to_sym] = v }
@@ -201,6 +203,8 @@ RSpec.shared_examples "patch request" do |model, path, data|
 
   context "when the hash has a redundant field" do
     it "returns code 400 with 'redundant field in record' message" do
+      if data.nil? then data = var_data end
+
       id = model.first[model.primary_key]
 
       corrupt = data.dup
@@ -214,6 +218,8 @@ RSpec.shared_examples "patch request" do |model, path, data|
 
   context "when the hash values have mismatched data types" do
     it "returns code 400 with 'invalid data type in record' message" do
+      if data.nil? then data = var_data end
+
       id = model.first[model.primary_key]
 
       corrupt = data.dup
@@ -408,7 +414,12 @@ RSpec.describe "Mad Scientists web-service" do
 
   describe "#patch 'scientists/:id'" do
     it_behaves_like "patch request", Scientist, 'scientists/%s',
-      {"madness_level" => 200, "galaxy_destruction_attempts" => 500}
+      {"name" => "Svoloch", "galaxy_destruction_attempts" => 500}
+    it_behaves_like "patch request", Scientist, 'scientists/%s',
+      {"name" => "Svoloch"}
+    it_behaves_like "patch request", Scientist, 'scientists/%s',
+      {"name" => "Svoloch", "galaxy_destruction_attempts" => 500,
+        "madness_level": 10}
 
     let(:id) { Scientist[name: 'Emmett Brown'].scientist_id }
     let(:path) { 'scientists/%s' % [id] }
@@ -682,6 +693,14 @@ RSpec.describe "Mad Scientists web-service" do
   describe "#patch 'devices/:id'" do
     it_behaves_like "patch request", Device, 'devices/%s',
       {"power" => 200, "name" => "Avalanche"}
+    it_behaves_like "patch request", Device, 'devices/%s',
+      {"name" => "Avalanche"}
+    it_behaves_like "patch request", Device, 'devices/%s' do
+      let(:var_data) {
+        {"power" => 200, "name" => "Avalanche",
+         "scientist_id": Scientist.first.scientist_id}
+      }
+    end
 
     let(:id) { Device[name: 'Atomic bomb'].device_id }
     let(:path) { 'devices/%s' % [id] }

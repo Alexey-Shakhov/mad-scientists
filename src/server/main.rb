@@ -85,11 +85,12 @@ patch '/scientists/:id' do |id|
       halt 400, "name #{update['name']} already in database"
     end
     
-    if update['galaxy_destruction_attempts'] < 0
+    if update['galaxy_destruction_attempts'] and
+        update['galaxy_destruction_attempts'] < 0
       halt 400, 'negative number of galaxy destruction attempts'
     end
 
-    if update['madness_level'] < 0
+    if update['madness_level'] and update['madness_level'] < 0
       halt 400, 'negative madness level'
     end
   end
@@ -177,7 +178,7 @@ patch '/devices/:id' do |id|
       halt 400, "no such scientist"
     end
 
-    if update['power'] < 0
+    if update['power'] and update['power'] < 0
       halt 400, 'negative power'
     end
 
