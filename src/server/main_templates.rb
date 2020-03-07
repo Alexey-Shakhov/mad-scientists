@@ -69,6 +69,8 @@ def patch(model, id)
     halt 400, 'invalid data type in record'
   end
 
+  yield update if block_given?
+
   update.keys.each do |key|
     record[key.to_sym] = update[key]
   end

@@ -80,7 +80,19 @@ post '/scientists' do
 end
 
 patch '/scientists/:id' do |id|
-  patch(Scientist, id)
+  patch(Scientist, id) do |update|
+    if Scientist[name: update['name']]
+      halt 400, "name #{update['name']} already in database"
+    end
+    
+    if update['galaxy_destruction_attempts'] < 0
+      halt 400, 'negative number of galaxy destruction attempts'
+    end
+
+    if update['madness_level'] < 0
+      halt 400, 'negative madness level'
+    end
+  end
 end
 
 delete '/scientists/:id' do |id|

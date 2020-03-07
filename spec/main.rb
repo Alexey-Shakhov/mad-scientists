@@ -409,6 +409,55 @@ RSpec.describe "Mad Scientists web-service" do
   describe "#patch 'scientists/:id'" do
     it_behaves_like "patch request", Scientist, 'scientists/%s',
       {"madness_level" => 200, "galaxy_destruction_attempts" => 500}
+
+    let(:id) { Scientist[name: 'Emmett Brown'].scientist_id }
+    let(:path) { 'scientists/%s' % [id] }
+
+    context 'when trying to post a scientist with an already taken name' do
+      it 'returns code 400 with "scientist with ' +
+          'name [duplicate name] already in database" message' do
+        name = "Richard Feynman"
+        data = {
+            'name' => name,
+            'madness_level' => 10,
+            'galaxy_destruction_attempts' => 12,
+        }
+
+        patch path, data.to_json
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq "name #{name} already in database"
+      end
+    end
+
+    context 'when madness_level is negative in a record' do
+      it 'returns code 400 with "negative madness level" message' do
+        data = {
+          'name' => "Two",
+          'madness_level' => -1,
+          'galaxy_destruction_attempts' => 1024,
+        }
+
+        patch path, data.to_json
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq 'negative madness level'
+      end
+    end
+
+    context 'when galaxy_destruction_attempts is negative in a record' do
+      it 'returns code 400 with' +
+          ' "negative number of galaxy destruction attempts" message' do
+        data = {
+          'name' => "Two",
+          'madness_level' => 80,
+          'galaxy_destruction_attempts' => -1,
+        }
+
+        patch path, data.to_json
+        expect(last_response.status).to eq 400
+        expect(last_response.body).to eq(
+            'negative number of galaxy destruction attempts')
+      end
+    end
   end
 
   describe "#delete 'scientists/:id'" do
