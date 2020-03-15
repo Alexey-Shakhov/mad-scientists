@@ -26,5 +26,13 @@ sudo puma
 ## Running tests
 ```shell
 cd spec
-ruby *.rb
+rspec *_test.rb
+```
+
+## Using Vagrant
+```shell
+vagrant up
+vagrant ssh
+cd /vagrant
+# Now you can run tests and the server...
 ```
