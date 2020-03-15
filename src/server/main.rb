@@ -117,10 +117,6 @@ get '/devices/:id' do |id|
   end
 end
 
-post '/devices' do
-  post(Device, request)
-end
-
 post '/scientists/:id/devices' do |id|
   get_by_id(Scientist, id) do |record|
     begin
