@@ -1,6 +1,6 @@
 ENV['APP_ENV'] = 'test'
 
-require 'rspec/autorun'
+require 'rspec'
 require 'rack/test'
 require 'sequel'
 Sequel.extension :migration
@@ -483,7 +483,7 @@ RSpec.describe "Mad Scientists web-service" do
 
         delete 'scientists/%s' % [id.to_s]
 
-        expect(last_response).to be_ok
+        expect(last_response.status).to eq 204
         expect(Scientist[name: "No Inventions"]).to be_nil
       end
     end
@@ -759,7 +759,7 @@ RSpec.describe "Mad Scientists web-service" do
 
       delete 'devices/%s' % id.to_s
 
-      expect(last_response).to be_ok
+      expect(last_response.status).to eq 204
       expect(Device[name: "Atomic bomb"]).to be_nil
     end
   end

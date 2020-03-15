@@ -92,4 +92,6 @@ def delete(model, id)
   rescue Sequel::ForeignKeyConstraintViolation
     halt 400, 'foreign key constraint failed'
   end
+
+  status 204
 end
