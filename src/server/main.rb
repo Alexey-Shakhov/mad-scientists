@@ -48,14 +48,21 @@ post '/scientists' do
   end
 
   names = []
-  records.each do |rec|
-    case check_record_integrity(fields, rec)
-    when :missing_field
-      halt 400, 'missing field in record'
-    when :redundant_field
-      halt 400, 'redundant field in record'
-    when :invalid_type
-      halt 400, 'invalid data type in record'
+  records.each_with_index do |rec, index|
+    fields.each do |k, v|
+      if not rec.keys.include? k.to_s
+        halt 400, "missing field #{k} in record #{index}"
+      end
+
+      if rec[k.to_s].class != fields[k]
+        halt 400, "invalid data type in record"
+      end
+    end
+
+    rec.each do |k, v|
+      if not fields.keys.include? k.to_sym
+        halt 400, 'redundant field in record'
+      end
     end
 
     if rec['madness_level'] < 0

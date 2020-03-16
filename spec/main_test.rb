@@ -123,14 +123,16 @@ RSpec.shared_examples 'post request' do |model, path|
   end
 
   context "when there is a missing field in one of the records" do
-    it "returns code 400 with 'missing field in record' message" do
+    it "returns code 400 with 'missing field [field_name] in record " +
+        "[record_index]' message" do
       corrupt = data.dup
-      corrupt[0].delete(data[0].keys[0])
+      field_name = data[0].keys[0]
+      corrupt[0].delete(field_name)
 
       post path, corrupt.to_json
 
       expect(last_response.status).to eq 400
-      expect(last_response.body).to eq 'missing field in record'
+      expect(last_response.body).to eq "missing field #{field_name} in record 0"
     end
   end
 
