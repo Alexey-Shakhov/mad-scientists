@@ -55,13 +55,13 @@ post '/scientists' do
       end
 
       if rec[k.to_s].class != fields[k]
-        halt 400, "invalid data type in record"
+        halt 400, "invalid type of field #{k} in record #{index}"
       end
     end
 
     rec.each do |k, v|
       if not fields.keys.include? k.to_sym
-        halt 400, 'redundant field in record'
+        halt 400, "redundant field #{k} in record #{index}"
       end
     end
 

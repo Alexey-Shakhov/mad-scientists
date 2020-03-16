@@ -137,26 +137,30 @@ RSpec.shared_examples 'post request' do |model, path|
   end
 
   context "when there is a redundant field in one of the records" do
-    it "returns code 400 with 'redundant field in record' message" do
+    it "returns code 400 with 'redundant field [field_name] in record" +
+        "[record_index]' message" do
       corrupt = data.dup
       corrupt[0]["koo"] = 3
 
       post path, corrupt.to_json
 
       expect(last_response.status).to eq 400
-      expect(last_response.body).to eq 'redundant field in record'
+      expect(last_response.body).to eq 'redundant field koo in record 0'
     end
   end
 
   context "when a record has mismatched data types" do
-    it "returns code 400 with 'invalid data type in record' message" do
+    it "returns code 400 with 'invalid type of field [field_name] in" +
+        "record [record_index]' message" do
       corrupt = data.dup
-      corrupt[0][data[0].keys[0]] = Hash.new
+      field_name = data[0].keys[0]
+      corrupt[0][field_name] = Hash.new
 
       post path, data.to_json
 
       expect(last_response.status).to eq 400
-      expect(last_response.body).to eq 'invalid data type in record'
+      expect(last_response.body).to eq(
+        "invalid type of field #{field_name} in record 0")
     end
   end
 end
