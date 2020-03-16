@@ -60,13 +60,14 @@ def patch(model, id)
 
   fields = schema_fields(model)
 
-  case check_record_integrity(fields, update, subset: true)
-  when :missing_field
-    halt 400, 'missing field in record'
-  when :redundant_field
-    halt 400, 'redundant field in record'
-  when :invalid_type
-    halt 400, 'invalid data type in record'
+  update.each do |k, v|
+    if not fields.keys.include? k.to_sym
+      halt 400, "redundant field #{k} in record"
+    end
+
+    if v.class != fields[k.to_sym]
+      halt 400, "invalid type of field #{k} in record"
+    end
   end
 
   yield update if block_given?

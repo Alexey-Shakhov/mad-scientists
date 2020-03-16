@@ -210,17 +210,18 @@ RSpec.shared_examples "patch request" do |model, path, data|
   end
 
   context "when the hash has a redundant field" do
-    it "returns code 400 with 'redundant field in record' message" do
+    it "returns code 400 with 'redundant field [field_name] in record" do
       if data.nil? then data = var_data end
 
       id = model.first[model.primary_key]
 
       corrupt = data.dup
-      corrupt[model.primary_key.to_s] = 2
+      field_name = model.primary_key.to_s
+      corrupt[field_name] = 2
       patch path % [id.to_s], corrupt.to_json
 
       expect(last_response.status).to eq 400
-      expect(last_response.body).to eq 'redundant field in record'
+      expect(last_response.body).to eq "redundant field #{field_name} in record"
     end
   end
 
@@ -231,12 +232,14 @@ RSpec.shared_examples "patch request" do |model, path, data|
       id = model.first[model.primary_key]
 
       corrupt = data.dup
-      corrupt[data.keys[0]] = Hash.new
+      field_name = data.keys[0]
+      corrupt[field_name] = Hash.new
 
       patch path % [id.to_s], corrupt.to_json
 
       expect(last_response.status).to eq 400
-      expect(last_response.body).to eq 'invalid data type in record'
+      expect(last_response.body).to eq(
+        "invalid type of field #{field_name} in record")
     end
   end
 end
