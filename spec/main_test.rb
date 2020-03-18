@@ -226,7 +226,8 @@ RSpec.shared_examples "patch request" do |model, path, data|
   end
 
   context "when the hash values have mismatched data types" do
-    it "returns code 400 with 'invalid data type in record' message" do
+    it "returns code 400 with 'invalid type of field [field_name]" +
+        " in record' message" do
       if data.nil? then data = var_data end
 
       id = model.first[model.primary_key]
@@ -362,12 +363,12 @@ RSpec.describe "Mad Scientists web-service" do
         name = "Richard Feynman"
         data = [
           {
-            'name' => name,
+            'name' => "One",
             'madness_level' => 10,
             'galaxy_destruction_attempts' => 12,
           },
           {
-            'name' => "One",
+            'name' => name,
             'madness_level' => 1,
             'galaxy_destruction_attempts' => 1024,
           }
@@ -380,7 +381,8 @@ RSpec.describe "Mad Scientists web-service" do
     end
 
     context 'when madness_level is negative in a record' do
-      it 'returns code 400 with "negative madness level" message' do
+      it 'returns code 400 with "negative madness level in record' +
+          '[record_index]" message' do
         data = [ 
           {
             'name' => "One",
@@ -396,13 +398,14 @@ RSpec.describe "Mad Scientists web-service" do
 
         post 'scientists', data.to_json
         expect(last_response.status).to eq 400
-        expect(last_response.body).to eq 'negative madness level'
+        expect(last_response.body).to eq 'negative madness level in record 1'
       end
     end
 
     context 'when galaxy_destruction_attempts is negative in a record' do
       it 'returns code 400 with' +
-          ' "negative number of galaxy destruction attempts" message' do
+          ' "negative number of galaxy destruction attempts in record ' +
+          '[record_index]" message' do
         data = [ 
           {
             'name' => "One",
@@ -419,7 +422,7 @@ RSpec.describe "Mad Scientists web-service" do
         post 'scientists', data.to_json
         expect(last_response.status).to eq 400
         expect(last_response.body).to eq(
-            'negative number of galaxy destruction attempts')
+            'negative number of galaxy destruction attempts in record 1')
       end
     end
   end
@@ -582,7 +585,8 @@ RSpec.describe "Mad Scientists web-service" do
     end
 
     context "when there is a missing field in one of the records" do
-      it "returns code 400 with 'missing field in record' message" do
+      it "returns code 400 with 'missing field [field_name] in record " +
+          "[record_index]' message" do
         data = [
           {
             'name' => "One",
@@ -596,12 +600,13 @@ RSpec.describe "Mad Scientists web-service" do
         post path, data.to_json
 
         expect(last_response.status).to eq 400
-        expect(last_response.body).to eq 'missing field in record'
+        expect(last_response.body).to eq 'missing field power in record 1'
       end
     end
 
     context "when there is a redundant field in one of the records" do
-      it "returns code 400 with 'redundant field in record' message" do
+      it "returns code 400 with 'redundant field [field_name] in record " +
+          "[record_index]' message" do
         data = [
           {
             'name' => "One",
@@ -617,12 +622,13 @@ RSpec.describe "Mad Scientists web-service" do
         post path, data.to_json
 
         expect(last_response.status).to eq 400
-        expect(last_response.body).to eq 'redundant field in record'
+        expect(last_response.body).to eq 'redundant field weight in record 1'
       end
     end
 
     context "when a record has mismatched data types" do
-      it "returns code 400 with 'invalid data type in record' message" do
+      it "returns code 400 with 'invalid type of field [field_name] " +
+          "in record [record_index]' message" do
         data = [
           {
             'name' => "One",
@@ -637,12 +643,14 @@ RSpec.describe "Mad Scientists web-service" do
         post path, data.to_json
 
         expect(last_response.status).to eq 400
-        expect(last_response.body).to eq 'invalid data type in record'
+        expect(last_response.body).to eq(
+          'invalid type of field power in record 1')
       end
     end
 
     context "when power is negative in a record" do
-      it "returns code 400 with 'negative power' message" do
+      it "returns code 400 with 'negative power in record " +
+          "[record_index]' message" do
         data = [
           {
             'name' => "One",
@@ -657,7 +665,7 @@ RSpec.describe "Mad Scientists web-service" do
         post path, data.to_json
 
         expect(last_response.status).to eq 400
-        expect(last_response.body).to eq 'negative power'
+        expect(last_response.body).to eq 'negative power in record 1'
       end
     end
 

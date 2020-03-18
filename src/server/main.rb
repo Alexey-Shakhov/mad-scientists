@@ -66,11 +66,12 @@ post '/scientists' do
     end
 
     if rec['madness_level'] < 0
-      halt 400, 'negative madness level'
+      halt 400, "negative madness level in record #{index}"
     end
 
     if rec['galaxy_destruction_attempts'] < 0
-      halt 400, 'negative number of galaxy destruction attempts'
+      halt(400,
+        "negative number of galaxy destruction attempts in record #{index}")
     end
 
     if names.include? rec['name']
@@ -145,23 +146,30 @@ post '/scientists/:id/devices' do |id|
     end
 
     records = records.map do |rec|
-      rec[:scientist_id] = Integer(id)
+      rec["scientist_id"] = Integer(id)
       rec
     end
 
     names = []
-    records.each do |rec|
-      case check_record_integrity(fields, rec)
-      when :missing_field
-        halt 400, 'missing field in record'
-      when :redundant_field
-        halt 400, 'redundant field in record'
-      when :invalid_type
-        halt 400, 'invalid data type in record'
+    records.each_with_index do |rec, index|
+      fields.each do |k, v|
+        if not rec.keys.include? k.to_s
+          halt 400, "missing field #{k} in record #{index}"
+        end
+
+        if rec[k.to_s].class != fields[k]
+          halt 400, "invalid type of field #{k} in record #{index}"
+        end
+      end
+
+      rec.each do |k, v|
+        if not fields.keys.include? k.to_sym
+          halt 400, "redundant field #{k} in record #{index}"
+        end
       end
 
       if rec["power"] < 0
-        halt 400, 'negative power'
+        halt 400, "negative power in record #{index}"
       end
 
       if names.include? rec['name']
